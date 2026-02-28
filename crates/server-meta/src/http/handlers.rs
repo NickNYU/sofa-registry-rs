@@ -6,28 +6,28 @@ use sofa_registry_store::traits::leader_elector::LeaderElector;
 use sofa_registry_core::slot::SlotTable;
 
 #[derive(Serialize)]
-pub struct HealthResponse {
-    pub status: String,
-    pub leader: Option<String>,
-    pub epoch: i64,
-    pub data_server_count: usize,
-    pub session_server_count: usize,
+pub(crate) struct HealthResponse {
+    status: String,
+    leader: Option<String>,
+    epoch: i64,
+    data_server_count: usize,
+    session_server_count: usize,
 }
 
 #[derive(Serialize)]
-pub struct LeaderResponse {
-    pub leader: Option<String>,
-    pub epoch: i64,
-    pub am_i_leader: bool,
+pub(crate) struct LeaderResponse {
+    leader: Option<String>,
+    epoch: i64,
+    am_i_leader: bool,
 }
 
 #[derive(Serialize)]
-pub struct NodeListResponse {
-    pub nodes: Vec<String>,
-    pub count: usize,
+pub(crate) struct NodeListResponse {
+    nodes: Vec<String>,
+    count: usize,
 }
 
-pub async fn health_check(
+pub(crate) async fn health_check(
     State(state): State<Arc<MetaServerState>>,
 ) -> Json<HealthResponse> {
     let leader_info = state.leader_elector.get_leader_info();
@@ -40,7 +40,7 @@ pub async fn health_check(
     })
 }
 
-pub async fn get_leader(
+pub(crate) async fn get_leader(
     State(state): State<Arc<MetaServerState>>,
 ) -> Json<LeaderResponse> {
     let leader_info = state.leader_elector.get_leader_info();
@@ -51,13 +51,13 @@ pub async fn get_leader(
     })
 }
 
-pub async fn get_slot_table(
+pub(crate) async fn get_slot_table(
     State(state): State<Arc<MetaServerState>>,
 ) -> Json<SlotTable> {
     Json(state.slot_manager.get_slot_table())
 }
 
-pub async fn list_data_servers(
+pub(crate) async fn list_data_servers(
     State(state): State<Arc<MetaServerState>>,
 ) -> Json<NodeListResponse> {
     let nodes = state.data_server_manager.get_data_server_addresses();
@@ -65,7 +65,7 @@ pub async fn list_data_servers(
     Json(NodeListResponse { nodes, count })
 }
 
-pub async fn list_session_servers(
+pub(crate) async fn list_session_servers(
     State(state): State<Arc<MetaServerState>>,
 ) -> Json<NodeListResponse> {
     let nodes = state.session_server_manager.get_session_server_addresses();

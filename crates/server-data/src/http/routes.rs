@@ -7,7 +7,7 @@ use sofa_registry_server_shared::metrics as srv_metrics;
 use sofa_registry_core::constants::server_type;
 
 /// Build the HTTP router for the Data server admin API.
-pub fn data_routes(state: Arc<DataServerState>) -> Router {
+pub fn create_router(state: Arc<DataServerState>) -> Router {
     Router::new()
         .route("/api/data/health", get(handlers::health))
         .route("/api/data/datum/count", get(handlers::datum_count))

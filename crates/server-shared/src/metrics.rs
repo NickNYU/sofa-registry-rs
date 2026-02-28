@@ -93,3 +93,78 @@ pub const META_SLOT_TABLE_EPOCH: &str = "meta_slot_table_epoch";
 pub const META_IS_LEADER: &str = "meta_is_leader";
 pub const META_ELECTIONS_TOTAL: &str = "meta_elections_total";
 pub const META_LEASE_EVICTIONS_TOTAL: &str = "meta_lease_evictions_total";
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::Request;
+    use tower::ServiceExt;
+
+    #[test]
+    fn version_response_new_sets_server_type() {
+        let resp = VersionResponse::new("SESSION");
+        assert_eq!(resp.server_type, "SESSION");
+        assert!(!resp.version.is_empty());
+    }
+
+    #[test]
+    fn version_response_serializes_to_json() {
+        let resp = VersionResponse::new("DATA");
+        let json = serde_json::to_value(&resp).unwrap();
+        assert_eq!(json["server_type"], "DATA");
+        assert!(json["version"].is_string());
+    }
+
+    #[test]
+    fn version_response_version_matches_cargo_pkg() {
+        let resp = VersionResponse::new("META");
+        assert_eq!(resp.version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn metrics_router_has_metrics_route() {
+        // Build the router and verify it responds to /metrics
+        let router = metrics_router();
+        // Can construct without panic
+        let _ = router;
+    }
+
+    #[tokio::test]
+    async fn metrics_router_serves_metrics_endpoint() {
+        // Install recorder for this test
+        install_metrics_recorder();
+
+        let router = metrics_router();
+        let req = Request::builder()
+            .uri("/metrics")
+            .body(Body::empty())
+            .unwrap();
+        let resp = router.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn version_handler_returns_json() {
+        let handler = version_handler("TEST");
+        let json = (handler)().await;
+        assert_eq!(json.server_type, "TEST");
+    }
+
+    #[test]
+    fn metric_constants_are_not_empty() {
+        let constants = [
+            GRPC_REQUESTS_TOTAL,
+            GRPC_REQUEST_DURATION_SECONDS,
+            SESSION_ACTIVE_PUBLISHERS,
+            SESSION_ACTIVE_SUBSCRIBERS,
+            DATA_DATUM_COUNT,
+            DATA_SLOT_TABLE_EPOCH,
+            META_DATA_SERVERS,
+            META_IS_LEADER,
+        ];
+        for c in constants {
+            assert!(!c.is_empty());
+        }
+    }
+}

@@ -19,3 +19,7 @@ axum.workspace = true
 chrono.workspace = true
 metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

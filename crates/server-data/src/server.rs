@@ -10,7 +10,7 @@ use tracing::info;
 
 use crate::change::{DataChangeEventCenter, DataChangeReceiver};
 use crate::config::DataServerConfig;
-use crate::http::routes::data_routes;
+use crate::http::routes::create_router;
 use crate::lease::SessionLeaseManager;
 use crate::remoting::data_grpc_service::DataGrpcService;
 use sofa_registry_server_shared::meta_client::MetaClient;
@@ -164,7 +164,7 @@ impl DataServer {
             start_time: self.start_time,
         });
 
-        let router = data_routes(state);
+        let router = create_router(state);
         let mut http_server = AxumHttpServer::new(self.config.http_port);
         http_server.start(router).await?;
         info!("Data HTTP server started on port {}", self.config.http_port);

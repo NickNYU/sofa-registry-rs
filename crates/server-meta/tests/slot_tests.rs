@@ -54,7 +54,7 @@ fn test_allocate_three_servers_balanced() {
     let stats = SlotAllocator::get_distribution_stats(&table);
 
     // 256 / 3 = 85 or 86
-    for (_server, (leader_count, _)) in &stats {
+    for (leader_count, _) in stats.values() {
         assert!(
             *leader_count >= 85 && *leader_count <= 86,
             "Unbalanced: got {} leaders",
@@ -244,7 +244,7 @@ fn test_rebalance_same_servers_returns_none() {
 #[test]
 fn test_rebalance_same_servers_different_order_returns_none() {
     let servers = vec!["b".to_string(), "a".to_string()];
-    let table = SlotAllocator::allocate(256, 2, &vec!["a".to_string(), "b".to_string()], 1).unwrap();
+    let table = SlotAllocator::allocate(256, 2, &["a".to_string(), "b".to_string()], 1).unwrap();
 
     // Reversed order but same set
     assert!(SlotAllocator::rebalance(&table, &servers, 2).is_none());
@@ -341,7 +341,7 @@ fn test_allocate_large_slot_count() {
 
     let stats = SlotAllocator::get_distribution_stats(&table);
     // 1024 / 3 ~= 341 or 342
-    for (_server, (leader_count, _)) in &stats {
+    for (leader_count, _) in stats.values() {
         assert!(
             *leader_count >= 341 && *leader_count <= 342,
             "Unbalanced: {} leaders",
@@ -509,11 +509,10 @@ fn test_allocate_balance_for_various_server_counts() {
         let expected_min = 256 / server_count;
         let expected_max = expected_min + 1;
 
-        for (server, (leader_count, _)) in &stats {
+        for (leader_count, _) in stats.values() {
             assert!(
                 *leader_count >= expected_min && *leader_count <= expected_max,
-                "Server {} in {}-server cluster: expected {}-{} leaders, got {}",
-                server,
+                "Server in {}-server cluster: expected {}-{} leaders, got {}",
                 server_count,
                 expected_min,
                 expected_max,

@@ -137,15 +137,19 @@ fn error_from_io_error() {
 #[test]
 fn result_ok() {
     let result: Result<i32> = Ok(42);
-    assert_eq!(result.unwrap(), 42);
+    match result {
+        Ok(v) => assert_eq!(v, 42),
+        Err(e) => panic!("expected Ok, got Err: {}", e),
+    }
 }
 
 #[test]
 fn result_err() {
     let result: Result<i32> = Err(RegistryError::NotLeader);
-    assert!(result.is_err());
-    let err = result.unwrap_err();
-    assert_eq!(err.to_string(), "Not leader");
+    match result {
+        Ok(_) => panic!("expected Err"),
+        Err(e) => assert_eq!(e.to_string(), "Not leader"),
+    }
 }
 
 #[test]
@@ -216,7 +220,7 @@ fn all_error_variants_constructable() {
         RegistryError::Timeout("k".to_string()),
         RegistryError::Connection("l".to_string()),
         RegistryError::Internal("m".to_string()),
-        RegistryError::Io(std::io::Error::new(std::io::ErrorKind::Other, "n")),
+        RegistryError::Io(std::io::Error::other("n")),
     ];
 
     for (i, err) in errors.iter().enumerate() {

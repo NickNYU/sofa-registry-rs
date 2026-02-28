@@ -576,7 +576,7 @@ fn slot_table_large_allocation() {
     for server in &servers {
         let count = table.get_leader_count(server);
         assert!(
-            count >= 85 && count <= 86,
+            (85..=86).contains(&count),
             "server {} leads {} slots, expected ~85",
             server,
             count

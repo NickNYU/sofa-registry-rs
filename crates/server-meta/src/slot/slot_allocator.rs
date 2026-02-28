@@ -136,7 +136,7 @@ mod tests {
         let stats = SlotAllocator::get_distribution_stats(&table);
         
         // Each server should lead roughly 256/3 ≈ 85-86 slots
-        for (_server, (leader_count, _)) in &stats {
+        for (leader_count, _) in stats.values() {
             assert!(*leader_count >= 85 && *leader_count <= 86,
                 "Expected ~85 leaders, got {}", leader_count);
         }

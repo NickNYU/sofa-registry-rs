@@ -163,7 +163,7 @@ fn sign_uses_lowercase_hex() {
     // All chars should be lowercase hex
     for c in sig.chars() {
         assert!(
-            ('0'..='9').contains(&c) || ('a'..='f').contains(&c),
+            c.is_ascii_digit() || ('a'..='f').contains(&c),
             "expected lowercase hex, found '{}'",
             c
         );

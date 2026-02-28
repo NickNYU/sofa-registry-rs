@@ -669,11 +669,13 @@ fn base_register_default() {
 
 #[test]
 fn base_register_serialization_with_rename() {
-    let mut br = BaseRegister::default();
-    br.instance_id = Some("inst1".to_string());
-    br.data_id = Some("com.example.Svc".to_string());
-    br.app_name = Some("myApp".to_string());
-    br.data_info_id = Some("com.example.Svc#inst1#GRP".to_string());
+    let br = BaseRegister {
+        instance_id: Some("inst1".to_string()),
+        data_id: Some("com.example.Svc".to_string()),
+        app_name: Some("myApp".to_string()),
+        data_info_id: Some("com.example.Svc#inst1#GRP".to_string()),
+        ..Default::default()
+    };
 
     let json = serde_json::to_string(&br).unwrap();
     // Check that serde rename fields are present

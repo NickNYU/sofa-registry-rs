@@ -5,14 +5,14 @@ use std::sync::Arc;
 use crate::server::SessionServerState;
 
 #[derive(Serialize)]
-pub struct HealthResponse {
-    pub status: String,
-    pub publisher_count: usize,
-    pub subscriber_count: usize,
-    pub connection_count: usize,
+pub(crate) struct HealthResponse {
+    status: String,
+    publisher_count: usize,
+    subscriber_count: usize,
+    connection_count: usize,
 }
 
-pub async fn health_check(
+pub(crate) async fn health_check(
     State(state): State<Arc<SessionServerState>>,
 ) -> Json<HealthResponse> {
     Json(HealthResponse {
@@ -24,12 +24,12 @@ pub async fn health_check(
 }
 
 #[derive(Serialize)]
-pub struct CountResponse {
-    pub count: usize,
-    pub data_info_id_count: usize,
+pub(crate) struct CountResponse {
+    count: usize,
+    data_info_id_count: usize,
 }
 
-pub async fn publisher_count(
+pub(crate) async fn publisher_count(
     State(state): State<Arc<SessionServerState>>,
 ) -> Json<CountResponse> {
     Json(CountResponse {
@@ -38,7 +38,7 @@ pub async fn publisher_count(
     })
 }
 
-pub async fn subscriber_count(
+pub(crate) async fn subscriber_count(
     State(state): State<Arc<SessionServerState>>,
 ) -> Json<CountResponse> {
     Json(CountResponse {
@@ -48,19 +48,19 @@ pub async fn subscriber_count(
 }
 
 #[derive(Serialize)]
-pub struct ConnectionResponse {
-    pub client_id: String,
-    pub address: String,
-    pub connected_at: i64,
+pub(crate) struct ConnectionResponse {
+    client_id: String,
+    address: String,
+    connected_at: i64,
 }
 
 #[derive(Serialize)]
-pub struct ConnectionsResponse {
-    pub connections: Vec<ConnectionResponse>,
-    pub count: usize,
+pub(crate) struct ConnectionsResponse {
+    connections: Vec<ConnectionResponse>,
+    count: usize,
 }
 
-pub async fn connections(
+pub(crate) async fn connections(
     State(state): State<Arc<SessionServerState>>,
 ) -> Json<ConnectionsResponse> {
     let all = state.connection_service.get_all();
