@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package sofa.registry.meta;
+
+import "registry_model.proto";
+
+// Meta gRPC service - replaces SOFABolt for meta server communication
+service MetaService {
+    // Session/Data servers heartbeat to meta
+    rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+    // Get current slot table
+    rpc GetSlotTable(GetSlotTableRequest) returns (GetSlotTableResponse);
+    // Register a session/data node with meta
+    rpc RegisterNode(RegisterNodeRequest) returns (RegisterNodeResponse);
+    // Renew a node's lease
+    rpc RenewNode(RenewNodeRequest) returns (RenewNodeResponse);
+    // Query current leader
+    rpc GetLeader(GetLeaderRequest) returns (GetLeaderResponse);
+}
+
+message HeartbeatRequest {
+    string node_type = 1;  // SESSION, DATA, META
+    string address = 2;
+    int64 timestamp = 3;
+    string data_center = 4;
+}
+
+message HeartbeatResponse {
+    bool success = 1;
+    int64 slot_table_epoch = 2;
+}
+
+message GetSlotTableRequest {
+    string data_center = 1;
+    int64 current_epoch = 2;  // client's current epoch, for delta updates
+}
+
+message SlotPb {
+    uint32 id = 1;
+    string leader = 2;
+    int64 leader_epoch = 3;
+    repeated string followers = 4;
+}
+
+message SlotTablePb {
+    int64 epoch = 1;
+    repeated SlotPb slots = 2;
+}
+
+message GetSlotTableResponse {
+    bool success = 1;
+    SlotTablePb slot_table = 2;
+    bool unchanged = 3;  // true if client's epoch matches, no data returned
+}
+
+message RegisterNodeRequest {
+    string node_type = 1;
+    string address = 2;
+    string data_center = 3;
+    string cluster_id = 4;
+    map<string, string> attributes = 5;
+}
+
+message RegisterNodeResponse {
+    bool success = 1;
+    string message = 2;
+    SlotTablePb slot_table = 3;
+}
+
+message RenewNodeRequest {
+    string node_type = 1;
+    string address = 2;
+    string data_center = 3;
+    int64 duration_secs = 4;
+}
+
+message RenewNodeResponse {
+    bool success = 1;
+    int64 slot_table_epoch = 2;
+}
+
+message GetLeaderRequest {
+    string data_center = 1;
+}
+
+message GetLeaderResponse {
+    string leader = 1;
+    int64 epoch = 2;
+    int64 expire_timestamp = 3;
+}

@@ -1,0 +1,23 @@
+[package]
+name = "sofa-registry-integration-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+# This crate exists only to hold integration tests.
+# It has no library source of its own.
+
+[dependencies]
+sofa-registry-core.workspace = true
+sofa-registry-store.workspace = true
+sofa-registry-server-meta.workspace = true
+sofa-registry-server-data.workspace = true
+sofa-registry-server-session.workspace = true
+sofa-registry-client.workspace = true
+
+tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true, features = ["json"] }
+serde_json.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+tempfile = "3"

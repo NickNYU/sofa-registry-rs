@@ -1,0 +1,24 @@
+# Build artifacts
+/target
+**/target
+
+# Backup files
+**/*.rs.bk
+
+# Runtime data
+*.db
+*.db-journal
+*.log
+
+# Environment / secrets
+.env
+.env.*
+config.toml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store

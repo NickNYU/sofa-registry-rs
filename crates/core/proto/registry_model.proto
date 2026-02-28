@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package sofa.registry;
+
+// Base register fields shared across publisher/subscriber
+message BaseRegisterPb {
+    string instance_id = 1;
+    string zone = 2;
+    string app_name = 3;
+    string data_id = 4;
+    string group = 5;
+    string process_id = 6;
+    string regist_id = 7;
+    string client_id = 8;
+    string data_info_id = 9;
+    string ip = 10;
+    uint32 port = 11;
+    string event_type = 12;
+    int64 version = 13;
+    int64 timestamp = 14;
+    map<string, string> attributes = 15;
+}
+
+message DataBoxPb {
+    string data = 1;
+}
+
+message PublisherRegisterPb {
+    BaseRegisterPb base = 1;
+    repeated DataBoxPb data_list = 2;
+}
+
+message SubscriberRegisterPb {
+    BaseRegisterPb base = 1;
+    string scope = 2;
+    string accept_encoding = 3;
+    bool accept_multi = 4;
+}
+
+message RegisterResponsePb {
+    bool success = 1;
+    string regist_id = 2;
+    int64 version = 3;
+    bool refused = 4;
+    string message = 5;
+}
+
+message ReceivedDataPb {
+    string data_id = 1;
+    string group = 2;
+    string instance_id = 3;
+    string segment = 4;
+    string scope = 5;
+    repeated string subscriber_regist_ids = 6;
+    map<string, DataBoxListPb> data = 7;
+    int64 version = 8;
+    string local_zone = 9;
+    map<string, uint32> data_count = 10;
+}
+
+message DataBoxListPb {
+    repeated DataBoxPb data_box = 1;
+}

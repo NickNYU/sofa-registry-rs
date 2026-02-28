@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package sofa.registry.data;
+
+import "registry_model.proto";
+import "meta_service.proto";
+
+// Data gRPC service - handles datum storage and replication
+service DataService {
+    // Session server gets data for subscribers
+    rpc GetData(GetDataRequest) returns (GetDataResponse);
+    // Session server publishes data
+    rpc PublishData(PublishDataRequest) returns (PublishDataResponse);
+    // Session server unpublishes data
+    rpc UnPublishData(UnPublishDataRequest) returns (UnPublishDataResponse);
+    // Batch put data (publishers and unpublishers)
+    rpc BatchPutData(BatchPutDataRequest) returns (BatchPutDataResponse);
+    // Follower requests diff digest from leader
+    rpc SlotDiffDigest(SlotDiffDigestRequest) returns (SlotDiffDigestResponse);
+    // Follower requests diff publishers from leader
+    rpc SlotDiffPublisher(SlotDiffPublisherRequest) returns (SlotDiffPublisherResponse);
+    // Data change notification to session
+    rpc NotifyDataChange(NotifyDataChangeRequest) returns (NotifyDataChangeResponse);
+}
+
+message GetDataRequest {
+    string data_center = 1;
+    string data_info_id = 2;
+    uint32 slot_id = 3;
+    int64 slot_table_epoch = 4;
+    int64 slot_leader_epoch = 5;
+}
+
+message PublisherPb {
+    string data_info_id = 1;
+    string data_id = 2;
+    string instance_id = 3;
+    string group = 4;
+    string regist_id = 5;
+    string client_id = 6;
+    string cell = 7;
+    string app_name = 8;
+    string process_id = 9;
+    int64 version = 10;
+    int64 version_timestamp = 11;
+    string source_address = 12;
+    string session_process_id = 13;
+    repeated bytes data_list = 14;
+    string publish_type = 15;
+    string publish_source = 16;
+    map<string, string> attributes = 17;
+    int64 register_timestamp = 18;
+}
+
+message SubDatumPb {
+    string data_info_id = 1;
+    string data_center = 2;
+    string data_id = 3;
+    string instance_id = 4;
+    string group = 5;
+    repeated PublisherPb publishers = 6;
+    int64 version = 7;
+}
+
+message GetDataResponse {
+    bool success = 1;
+    uint32 slot_id = 2;
+    string status = 3;
+    SubDatumPb datum = 4;
+}
+
+message PublishDataRequest {
+    string data_center = 1;
+    uint32 slot_id = 2;
+    int64 slot_table_epoch = 3;
+    int64 slot_leader_epoch = 4;
+    repeated PublisherPb publishers = 5;
+}
+
+message PublishDataResponse {
+    bool success = 1;
+    uint32 slot_id = 2;
+    string status = 3;
+}
+
+message UnPublishDataRequest {
+    string data_center = 1;
+    uint32 slot_id = 2;
+    int64 slot_table_epoch = 3;
+    int64 slot_leader_epoch = 4;
+    repeated string regist_ids = 5;
+    string data_info_id = 6;
+    string session_process_id = 7;
+}
+
+message UnPublishDataResponse {
+    bool success = 1;
+    uint32 slot_id = 2;
+    string status = 3;
+}
+
+message BatchPutDataRequest {
+    string data_center = 1;
+    uint32 slot_id = 2;
+    int64 slot_table_epoch = 3;
+    int64 slot_leader_epoch = 4;
+    repeated PublisherPb publishers = 5;
+    repeated string unpublisher_regist_ids = 6;
+    string session_process_id = 7;
+}
+
+message BatchPutDataResponse {
+    bool success = 1;
+    uint32 slot_id = 2;
+    string status = 3;
+}
+
+message DatumDigestPb {
+    string data_info_id = 1;
+    int64 version = 2;
+    uint32 publisher_count = 3;
+}
+
+message SlotDiffDigestRequest {
+    string data_center = 1;
+    uint32 slot_id = 2;
+    int64 slot_table_epoch = 3;
+    repeated DatumDigestPb digests = 4;
+}
+
+message SlotDiffDigestResponse {
+    bool success = 1;
+    repeated string updated_data_info_ids = 2;
+    repeated string removed_data_info_ids = 3;
+    repeated DatumDigestPb updated_digests = 4;
+}
+
+message SlotDiffPublisherRequest {
+    string data_center = 1;
+    uint32 slot_id = 2;
+    int64 slot_table_epoch = 3;
+    repeated string data_info_ids = 4;
+}
+
+message SlotDiffPublisherResponse {
+    bool success = 1;
+    repeated SubDatumPb datums = 2;
+}
+
+message NotifyDataChangeRequest {
+    string data_center = 1;
+    string data_info_id = 2;
+    int64 version = 3;
+}
+
+message NotifyDataChangeResponse {
+    bool success = 1;
+}

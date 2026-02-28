@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package sofa.registry.session;
+
+import "registry_model.proto";
+
+// Session gRPC service - client-facing service for pub/sub
+service SessionService {
+    // Register a publisher
+    rpc RegisterPublisher(sofa.registry.PublisherRegisterPb) returns (sofa.registry.RegisterResponsePb);
+    // Register a subscriber
+    rpc RegisterSubscriber(sofa.registry.SubscriberRegisterPb) returns (sofa.registry.RegisterResponsePb);
+    // Unregister publisher or subscriber
+    rpc Unregister(UnregisterRequest) returns (sofa.registry.RegisterResponsePb);
+    // Server-side streaming for push notifications
+    rpc Subscribe(SubscribeStreamRequest) returns (stream sofa.registry.ReceivedDataPb);
+    // Client heartbeat to keep connection alive
+    rpc ClientHeartbeat(ClientHeartbeatRequest) returns (ClientHeartbeatResponse);
+    // Called by data server to notify session server of data changes
+    rpc NotifyDataChange(DataChangeNotification) returns (DataChangeNotificationResponse);
+}
+
+message DataChangeNotification {
+    string data_center = 1;
+    string data_info_id = 2;
+    int64 version = 3;
+    uint32 slot_id = 4;
+    string data_server_address = 5;
+}
+
+message DataChangeNotificationResponse {
+    bool success = 1;
+}
+
+message UnregisterRequest {
+    sofa.registry.BaseRegisterPb base = 1;
+    string registry_type = 2;  // PUB or SUB
+}
+
+message SubscribeStreamRequest {
+    string client_id = 1;
+    string zone = 2;
+    string data_center = 3;
+}
+
+message ClientHeartbeatRequest {
+    string client_id = 1;
+    int64 timestamp = 2;
+}
+
+message ClientHeartbeatResponse {
+    bool success = 1;
+    int64 server_timestamp = 2;
+}

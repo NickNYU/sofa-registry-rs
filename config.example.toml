@@ -1,0 +1,39 @@
+# SOFARegistry-RS Configuration
+# Copy this file to config.toml and modify as needed
+
+[common]
+data_center = "DefaultDataCenter"
+cluster_id = "DefaultCluster"
+# local_address = "auto"  # Omit for auto-detection, or set an explicit IP
+
+[meta]
+grpc_port = 9611
+http_port = 9612
+db_url = "sqlite://sofa-registry-meta.db?mode=rwc"
+meta_peers = ["127.0.0.1:9611"]
+session_lease_secs = 30
+data_lease_secs = 30
+slot_num = 256
+slot_replicas = 2
+election_lock_duration_ms = 30000
+election_interval_ms = 1000
+
+[data]
+grpc_port = 9621
+http_port = 9622
+meta_server_addresses = ["127.0.0.1:9611"]
+slot_sync_interval_secs = 6
+data_change_debounce_ms = 500
+session_lease_secs = 30
+
+[session]
+grpc_port = 9601
+http_port = 9602
+meta_server_addresses = ["127.0.0.1:9611"]
+push_task_timeout_ms = 3000
+push_task_buffer_size = 10000
+
+[mcp]
+meta_http_url = "http://127.0.0.1:9612"
+session_http_url = "http://127.0.0.1:9602"
+data_http_url = "http://127.0.0.1:9622"
