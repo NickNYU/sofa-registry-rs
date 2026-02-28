@@ -16,10 +16,20 @@ fn make_event(data_info_id: &str, version: i64) -> DataChangeEvent {
 }
 
 /// Helper to create a DataChangeEventCenter with test defaults.
-fn make_center(buffer_size: usize) -> (DataChangeEventCenter, sofa_registry_server_data::change::DataChangeReceiver) {
+fn make_center(
+    buffer_size: usize,
+) -> (
+    DataChangeEventCenter,
+    sofa_registry_server_data::change::DataChangeReceiver,
+) {
     let pool = Arc::new(GrpcClientPool::new());
     let lease_manager = Arc::new(SessionLeaseManager::new(60));
-    DataChangeEventCenter::new(buffer_size, pool, lease_manager, "127.0.0.1:9600".to_string())
+    DataChangeEventCenter::new(
+        buffer_size,
+        pool,
+        lease_manager,
+        "127.0.0.1:9600".to_string(),
+    )
 }
 
 #[test]
@@ -33,7 +43,10 @@ fn new_returns_center_and_receiver() {
 async fn on_change_sends_event_through_channel() {
     let (center, receiver) = make_center(16);
 
-    center.on_change(make_event("com.example.ServiceA#default#DEFAULT_GROUP", 100));
+    center.on_change(make_event(
+        "com.example.ServiceA#default#DEFAULT_GROUP",
+        100,
+    ));
 
     // The receiver wraps an mpsc::Receiver. We cannot call recv() directly on
     // DataChangeReceiver because the field is private. Instead, we verify the
@@ -93,7 +106,10 @@ async fn merge_loop_cancellation_stops_immediately() {
 
     // Should complete very quickly because cancellation was already requested.
     let result = tokio::time::timeout(std::time::Duration::from_millis(200), handle).await;
-    assert!(result.is_ok(), "Merge loop should have exited promptly on cancellation");
+    assert!(
+        result.is_ok(),
+        "Merge loop should have exited promptly on cancellation"
+    );
     result.unwrap().unwrap();
 }
 
@@ -111,7 +127,10 @@ async fn merge_loop_exits_when_channel_closed() {
     });
 
     let result = tokio::time::timeout(std::time::Duration::from_millis(200), handle).await;
-    assert!(result.is_ok(), "Merge loop should exit when the channel is closed");
+    assert!(
+        result.is_ok(),
+        "Merge loop should exit when the channel is closed"
+    );
     result.unwrap().unwrap();
 }
 

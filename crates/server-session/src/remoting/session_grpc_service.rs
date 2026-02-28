@@ -8,19 +8,16 @@ use tracing::{debug, info, warn};
 
 use sofa_registry_server_shared::metrics as srv_metrics;
 
-use sofa_registry_core::model::{
-    ConnectId, ProcessId, Publisher, RegisterVersion, Subscriber,
-};
 use sofa_registry_core::model::publish_type::{PublishSource, PublishType};
 use sofa_registry_core::model::Scope;
-use sofa_registry_core::pb::sofa::registry::{
-    PublisherRegisterPb, RegisterResponsePb, SubscriberRegisterPb, ReceivedDataPb,
-};
+use sofa_registry_core::model::{ConnectId, ProcessId, Publisher, RegisterVersion, Subscriber};
 use sofa_registry_core::pb::sofa::registry::session::{
-    session_service_server::SessionService,
-    ClientHeartbeatRequest, ClientHeartbeatResponse,
-    DataChangeNotification, DataChangeNotificationResponse,
-    SubscribeStreamRequest, UnregisterRequest,
+    session_service_server::SessionService, ClientHeartbeatRequest, ClientHeartbeatResponse,
+    DataChangeNotification, DataChangeNotificationResponse, SubscribeStreamRequest,
+    UnregisterRequest,
+};
+use sofa_registry_core::pb::sofa::registry::{
+    PublisherRegisterPb, ReceivedDataPb, RegisterResponsePb, SubscriberRegisterPb,
 };
 
 use crate::server::SessionServerState;
@@ -40,33 +37,43 @@ impl SessionGrpcServiceImpl {
 fn pb_to_publisher(pb: &PublisherRegisterPb, server_address: &str) -> Publisher {
     let base = pb.base.as_ref();
 
-    let (data_info_id, data_id, instance_id, group, regist_id, client_id, ip, port, version, timestamp) =
-        match base {
-            Some(b) => (
-                b.data_info_id.clone(),
-                b.data_id.clone(),
-                b.instance_id.clone(),
-                b.group.clone(),
-                b.regist_id.clone(),
-                b.client_id.clone(),
-                b.ip.clone(),
-                b.port,
-                b.version,
-                b.timestamp,
-            ),
-            None => (
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                String::new(),
-                0,
-                0,
-                0,
-            ),
-        };
+    let (
+        data_info_id,
+        data_id,
+        instance_id,
+        group,
+        regist_id,
+        client_id,
+        ip,
+        port,
+        version,
+        timestamp,
+    ) = match base {
+        Some(b) => (
+            b.data_info_id.clone(),
+            b.data_id.clone(),
+            b.instance_id.clone(),
+            b.group.clone(),
+            b.regist_id.clone(),
+            b.client_id.clone(),
+            b.ip.clone(),
+            b.port,
+            b.version,
+            b.timestamp,
+        ),
+        None => (
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new(),
+            0,
+            0,
+            0,
+        ),
+    };
 
     let process_id = base
         .map(|b| ProcessId::new(&b.process_id, 0, 0))
@@ -74,9 +81,7 @@ fn pb_to_publisher(pb: &PublisherRegisterPb, server_address: &str) -> Publisher 
 
     let source_address = ConnectId::new(&ip, port as u16, server_address, 0);
 
-    let attributes = base
-        .map(|b| b.attributes.clone())
-        .unwrap_or_default();
+    let attributes = base.map(|b| b.attributes.clone()).unwrap_or_default();
 
     Publisher {
         data_info_id,
@@ -190,10 +195,9 @@ impl SessionService for SessionGrpcServiceImpl {
         );
 
         // Track connection
-        self.state.connection_service.connect(
-            client_id.clone(),
-            publisher.source_address.to_string(),
-        );
+        self.state
+            .connection_service
+            .connect(client_id.clone(), publisher.source_address.to_string());
 
         // Forward write to data server via the write acceptor
         self.state
@@ -207,7 +211,8 @@ impl SessionService for SessionGrpcServiceImpl {
         self.state.publisher_registry.register(publisher);
 
         // Metrics
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "register_publisher").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "register_publisher")
+            .increment(1);
         metrics::gauge!(srv_metrics::SESSION_ACTIVE_PUBLISHERS)
             .set(self.state.publisher_registry.count() as f64);
 
@@ -236,16 +241,16 @@ impl SessionService for SessionGrpcServiceImpl {
         );
 
         // Track connection
-        self.state.connection_service.connect(
-            client_id.clone(),
-            subscriber.source_address.to_string(),
-        );
+        self.state
+            .connection_service
+            .connect(client_id.clone(), subscriber.source_address.to_string());
 
         // Register locally
         self.state.subscriber_registry.register(subscriber);
 
         // Metrics
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "register_subscriber").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "register_subscriber")
+            .increment(1);
         metrics::gauge!(srv_metrics::SESSION_ACTIVE_SUBSCRIBERS)
             .set(self.state.subscriber_registry.count() as f64);
 
@@ -273,9 +278,9 @@ impl SessionService for SessionGrpcServiceImpl {
         let req = request.into_inner();
         let registry_type = req.registry_type.clone();
 
-        let base = req.base.ok_or_else(|| {
-            Status::invalid_argument("Missing base register info")
-        })?;
+        let base = req
+            .base
+            .ok_or_else(|| Status::invalid_argument("Missing base register info"))?;
 
         let data_info_id = &base.data_info_id;
         let regist_id = &base.regist_id;
@@ -289,8 +294,10 @@ impl SessionService for SessionGrpcServiceImpl {
 
         match registry_type.as_str() {
             sofa_registry_core::constants::value_constants::PUBLISH => {
-                if let Some(publisher) =
-                    self.state.publisher_registry.unregister(data_info_id, regist_id)
+                if let Some(publisher) = self
+                    .state
+                    .publisher_registry
+                    .unregister(data_info_id, regist_id)
                 {
                     self.state
                         .write_acceptor
@@ -360,11 +367,14 @@ impl SessionService for SessionGrpcServiceImpl {
         let req = request.into_inner();
         debug!("ClientHeartbeat from client_id={}", req.client_id);
 
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "client_heartbeat").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "client_heartbeat")
+            .increment(1);
 
         // Refresh connection tracking — update heartbeat if connected, otherwise register
         if self.state.connection_service.is_connected(&req.client_id) {
-            self.state.connection_service.touch_heartbeat(&req.client_id);
+            self.state
+                .connection_service
+                .touch_heartbeat(&req.client_id);
         } else {
             self.state
                 .connection_service
@@ -387,23 +397,37 @@ impl SessionService for SessionGrpcServiceImpl {
             req.data_info_id, req.version, req.data_server_address
         );
 
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "notify_data_change").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "notify_data_change")
+            .increment(1);
 
         // Check if the version is newer than what we have cached
         let remote_version = sofa_registry_core::model::DatumVersion { value: req.version };
-        if !self.state.cache_service.is_stale(&req.data_info_id, &remote_version) {
+        if !self
+            .state
+            .cache_service
+            .is_stale(&req.data_info_id, &remote_version)
+        {
             debug!("Data unchanged for {}, skipping push", req.data_info_id);
-            return Ok(Response::new(DataChangeNotificationResponse { success: true }));
+            return Ok(Response::new(DataChangeNotificationResponse {
+                success: true,
+            }));
         }
 
         // Update cache
-        self.state.cache_service.update_version(&req.data_info_id, remote_version);
+        self.state
+            .cache_service
+            .update_version(&req.data_info_id, remote_version);
 
         // Get subscribers for this data_info_id
-        let subscribers = self.state.subscriber_registry.get_by_data_info_id(&req.data_info_id);
+        let subscribers = self
+            .state
+            .subscriber_registry
+            .get_by_data_info_id(&req.data_info_id);
         if subscribers.is_empty() {
             debug!("No subscribers for {}", req.data_info_id);
-            return Ok(Response::new(DataChangeNotificationResponse { success: true }));
+            return Ok(Response::new(DataChangeNotificationResponse {
+                success: true,
+            }));
         }
 
         let subscriber_ids: Vec<String> = subscribers.iter().map(|s| s.client_id.clone()).collect();
@@ -433,6 +457,8 @@ impl SessionService for SessionGrpcServiceImpl {
             })
             .await;
 
-        Ok(Response::new(DataChangeNotificationResponse { success: true }))
+        Ok(Response::new(DataChangeNotificationResponse {
+            success: true,
+        }))
     }
 }

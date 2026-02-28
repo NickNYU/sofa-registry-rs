@@ -10,14 +10,14 @@ use sofa_registry_remoting::GrpcClientPool;
 use crate::cache::SessionCacheService;
 use crate::config::SessionServerConfig;
 use crate::connection::ConnectionService;
+use crate::http;
 use crate::push::{PushReceiver, PushService, StreamRegistry};
 use crate::registry::{PublisherRegistry, SubscriberRegistry};
 use crate::remoting::SessionGrpcServiceImpl;
-use sofa_registry_server_shared::meta_client::MetaClient;
-use sofa_registry_store::traits::MetaServiceClient as _;
 use crate::slot::SessionSlotManager;
 use crate::write::{WriteDataAcceptor, WriteDataReceiver};
-use crate::http;
+use sofa_registry_server_shared::meta_client::MetaClient;
+use sofa_registry_store::traits::MetaServiceClient as _;
 
 /// Shared state accessible by HTTP handlers and gRPC service.
 pub struct SessionServerState {
@@ -145,7 +145,10 @@ impl SessionServer {
 
         match meta_client.register_node().await {
             Ok(Some(slot_table)) => {
-                info!("Registered with meta server, slot table epoch={}", slot_table.epoch);
+                info!(
+                    "Registered with meta server, slot table epoch={}",
+                    slot_table.epoch
+                );
             }
             Ok(None) => {
                 info!("Registered with meta server, no slot table yet");

@@ -73,7 +73,7 @@ fn make_meta_config(ports: &TestPorts, db_path: &std::path::Path) -> MetaServerC
         db_url,
         session_lease_secs: 30,
         data_lease_secs: 30,
-        slot_num: 16,       // small for tests
+        slot_num: 16, // small for tests
         slot_replicas: 1,
         election_lock_duration_ms: 30_000,
         election_interval_ms: 2_000,
@@ -112,10 +112,7 @@ fn make_session_config(ports: &TestPorts) -> SessionServerConfig {
 }
 
 /// Helper: start a MetaServer backed by a fresh in-memory SQLite DB.
-async fn start_meta_server(
-    ports: &TestPorts,
-    db_path: &std::path::Path,
-) -> MetaServer {
+async fn start_meta_server(ports: &TestPorts, db_path: &std::path::Path) -> MetaServer {
     let config = make_meta_config(ports, db_path);
     let pool = create_pool(&config.db_url)
         .await
@@ -126,11 +123,13 @@ async fn start_meta_server(
 
     let lock_repo = Arc::new(SqliteDistributeLockRepo::new(pool));
 
-    let server = MetaServer::new(config, lock_repo as Arc<dyn sofa_registry_store::traits::distribute_lock::DistributeLockRepository>).await;
-    server
-        .start()
-        .await
-        .expect("MetaServer failed to start");
+    let server = MetaServer::new(
+        config,
+        lock_repo
+            as Arc<dyn sofa_registry_store::traits::distribute_lock::DistributeLockRepository>,
+    )
+    .await;
+    server.start().await.expect("MetaServer failed to start");
     server
 }
 
@@ -138,10 +137,7 @@ async fn start_meta_server(
 async fn start_data_server(ports: &TestPorts) -> DataServer {
     let config = make_data_config(ports);
     let mut server = DataServer::new(config);
-    server
-        .start()
-        .await
-        .expect("DataServer failed to start");
+    server.start().await.expect("DataServer failed to start");
     server
 }
 
@@ -149,10 +145,7 @@ async fn start_data_server(ports: &TestPorts) -> DataServer {
 async fn start_session_server(ports: &TestPorts) -> SessionServer {
     let config = make_session_config(ports);
     let mut server = SessionServer::new(config);
-    server
-        .start()
-        .await
-        .expect("SessionServer failed to start");
+    server.start().await.expect("SessionServer failed to start");
     server
 }
 
@@ -338,7 +331,11 @@ async fn full_cluster_starts_all_three_servers() {
     // Check Meta health
     {
         let url = format!("http://127.0.0.1:{}/api/meta/health", ports.meta_http());
-        let resp = client.get(&url).send().await.expect("meta health request failed");
+        let resp = client
+            .get(&url)
+            .send()
+            .await
+            .expect("meta health request failed");
         assert!(resp.status().is_success());
         let body: serde_json::Value = resp.json().await.expect("meta health json");
         let status = body["status"].as_str().unwrap();
@@ -352,7 +349,11 @@ async fn full_cluster_starts_all_three_servers() {
     // Check Data health
     {
         let url = format!("http://127.0.0.1:{}/api/data/health", ports.data_http());
-        let resp = client.get(&url).send().await.expect("data health request failed");
+        let resp = client
+            .get(&url)
+            .send()
+            .await
+            .expect("data health request failed");
         assert!(resp.status().is_success());
         let body: serde_json::Value = resp.json().await.expect("data health json");
         assert_eq!(body["status"].as_str().unwrap(), "UP");

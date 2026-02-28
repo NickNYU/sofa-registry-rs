@@ -75,4 +75,3 @@ pub(crate) async fn connections(
         .collect();
     Json(ConnectionsResponse { connections, count })
 }
-

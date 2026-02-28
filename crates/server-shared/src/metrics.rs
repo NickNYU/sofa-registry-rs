@@ -1,6 +1,6 @@
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::{Json, Router, routing::get};
+use axum::{routing::get, Json, Router};
 use metrics_exporter_prometheus::{PrometheusBuilder, PrometheusHandle};
 use serde::Serialize;
 use std::sync::OnceLock;
@@ -54,7 +54,10 @@ impl VersionResponse {
 }
 
 /// Axum handler that returns a `VersionResponse` JSON for the given server type.
-pub fn version_handler(server_type: &'static str) -> impl Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Json<VersionResponse>> + Send>> + Clone {
+pub fn version_handler(
+    server_type: &'static str,
+) -> impl Fn() -> std::pin::Pin<Box<dyn std::future::Future<Output = Json<VersionResponse>> + Send>>
+       + Clone {
     move || {
         let st = server_type;
         Box::pin(async move { Json(VersionResponse::new(st)) })

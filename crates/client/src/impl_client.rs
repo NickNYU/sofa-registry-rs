@@ -33,7 +33,9 @@ struct DefaultPublisherHandle {
 impl PublisherHandle for DefaultPublisherHandle {
     async fn republish(&self, data: &[&str]) -> Result<()> {
         if !self.registered.load(Ordering::SeqCst) {
-            return Err(RegistryError::Refused("publisher not registered".to_string()));
+            return Err(RegistryError::Refused(
+                "publisher not registered".to_string(),
+            ));
         }
 
         let data_list: Vec<DataBoxPb> = data
@@ -209,10 +211,8 @@ impl DefaultRegistryClient {
                         Ok(mut rx) => {
                             info!("Subscribe stream established");
                             while let Some(data) = rx.recv().await {
-                                let data_info_id = format!(
-                                    "{}#{}#{}",
-                                    data.data_id, data.instance_id, data.group
-                                );
+                                let data_info_id =
+                                    format!("{}#{}#{}", data.data_id, data.instance_id, data.group);
                                 if let Some(sub) = subscribers.get(&data_info_id) {
                                     sub.notify_data(data);
                                 } else {

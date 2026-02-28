@@ -206,10 +206,7 @@ impl McpServer {
     }
 
     async fn handle_tool_call(&self, id: Option<Value>, params: Value) -> JsonRpcResponse {
-        let tool_name = params
-            .get("name")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let tool_name = params.get("name").and_then(|v| v.as_str()).unwrap_or("");
         let args = params
             .get("arguments")
             .cloned()

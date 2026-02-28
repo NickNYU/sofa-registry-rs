@@ -13,10 +13,10 @@ use crate::config::DataServerConfig;
 use crate::http::routes::create_router;
 use crate::lease::SessionLeaseManager;
 use crate::remoting::data_grpc_service::DataGrpcService;
-use sofa_registry_server_shared::meta_client::MetaClient;
-use sofa_registry_store::traits::MetaServiceClient as _;
 use crate::replication::SlotDiffSyncer;
 use crate::slot::DataSlotManager;
+use sofa_registry_server_shared::meta_client::MetaClient;
+use sofa_registry_store::traits::MetaServiceClient as _;
 
 /// Shared state accessible from HTTP handlers and gRPC service.
 pub struct DataServerState {
@@ -47,11 +47,9 @@ pub struct DataServer {
 
 impl DataServer {
     pub fn new(config: DataServerConfig) -> Self {
-        let storage: Arc<dyn DatumStorage> =
-            Arc::new(LocalDatumStorage::new(config.slot_num));
+        let storage: Arc<dyn DatumStorage> = Arc::new(LocalDatumStorage::new(config.slot_num));
         let slot_manager = Arc::new(DataSlotManager::new(&config.grpc_address()));
-        let session_lease_manager =
-            Arc::new(SessionLeaseManager::new(config.session_lease_secs));
+        let session_lease_manager = Arc::new(SessionLeaseManager::new(config.session_lease_secs));
         let notify_pool = Arc::new(sofa_registry_remoting::GrpcClientPool::new());
         let (change_center, change_receiver) = DataChangeEventCenter::new(
             4096,
@@ -129,7 +127,10 @@ impl DataServer {
                 info!("Registered with Meta but no slot table received yet");
             }
             Err(e) => {
-                info!("Failed to register with Meta: {}; will retry in sync loop", e);
+                info!(
+                    "Failed to register with Meta: {}; will retry in sync loop",
+                    e
+                );
             }
         }
     }

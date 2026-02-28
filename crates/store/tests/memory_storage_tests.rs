@@ -48,7 +48,9 @@ fn put_publisher_and_get_datum() {
     let version = storage.put_publisher("dc1", pub1);
     assert!(version.value > 0, "version should be positive");
 
-    let datum = storage.get("dc1", "svc#inst#grp").expect("datum should exist");
+    let datum = storage
+        .get("dc1", "svc#inst#grp")
+        .expect("datum should exist");
     assert_eq!(datum.pub_map.len(), 1);
     assert!(datum.pub_map.contains_key("reg-1"));
     assert_eq!(datum.data_info_id, "svc#inst#grp");
@@ -120,7 +122,9 @@ fn remove_publisher_success() {
 #[test]
 fn remove_nonexistent_publisher_returns_none() {
     let storage = LocalDatumStorage::new(256);
-    assert!(storage.remove_publisher("dc1", "svc#inst#grp", "nope").is_none());
+    assert!(storage
+        .remove_publisher("dc1", "svc#inst#grp", "nope")
+        .is_none());
 }
 
 #[test]
@@ -130,7 +134,9 @@ fn remove_publisher_from_nonexistent_dc_returns_none() {
     let pub1 = make_publisher("svc#inst#grp", "reg-1", &pid);
     storage.put_publisher("dc1", pub1);
 
-    assert!(storage.remove_publisher("dc-other", "svc#inst#grp", "reg-1").is_none());
+    assert!(storage
+        .remove_publisher("dc-other", "svc#inst#grp", "reg-1")
+        .is_none());
 }
 
 #[test]
@@ -390,13 +396,19 @@ fn clean_slot_removes_matching_data_info_ids() {
 
     // Verify the cleaned ids are gone
     for id in &ids_in_slot {
-        assert!(storage.get("dc1", id).is_none(), "cleaned id should be gone");
+        assert!(
+            storage.get("dc1", id).is_none(),
+            "cleaned id should be gone"
+        );
     }
 
     // Verify the remaining ids are still there
     for id in &ids {
         if !ids_in_slot.contains(&id) {
-            assert!(storage.get("dc1", id).is_some(), "unaffected id should remain");
+            assert!(
+                storage.get("dc1", id).is_some(),
+                "unaffected id should remain"
+            );
         }
     }
 }
@@ -521,11 +533,8 @@ fn concurrent_put_and_remove() {
         handles.push(thread::spawn(move || {
             let pid = session_pid(&format!("10.0.0.{}", t + 10), 3000);
             for i in 100..150 {
-                let pub_i = make_publisher(
-                    &format!("svc-{}#inst#grp", i),
-                    &format!("reg-{}", i),
-                    &pid,
-                );
+                let pub_i =
+                    make_publisher(&format!("svc-{}#inst#grp", i), &format!("reg-{}", i), &pid);
                 storage.put_publisher("dc1", pub_i);
             }
         }));
@@ -556,11 +565,8 @@ fn concurrent_put_same_data_info_id() {
             let pid = session_pid(&format!("10.0.0.{}", t), 1000);
             for i in 0..pubs_per_thread {
                 // All threads write to the same data_info_id but different regist_ids
-                let pub_i = make_publisher(
-                    "shared-svc#inst#grp",
-                    &format!("reg-{}-{}", t, i),
-                    &pid,
-                );
+                let pub_i =
+                    make_publisher("shared-svc#inst#grp", &format!("reg-{}-{}", t, i), &pid);
                 storage.put_publisher("dc1", pub_i);
             }
         }));

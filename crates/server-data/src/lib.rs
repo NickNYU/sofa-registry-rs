@@ -1,9 +1,9 @@
-pub mod config;
 pub mod cache;
-pub mod slot;
 pub mod change;
-pub mod replication;
+pub mod config;
+pub mod http;
 pub mod lease;
 pub mod remoting;
-pub mod http;
+pub mod replication;
 pub mod server;
+pub mod slot;

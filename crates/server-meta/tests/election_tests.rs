@@ -1,24 +1,24 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
-use sofa_registry_store::jdbc::{SqliteDistributeLockRepo, create_pool, run_migrations};
-use sofa_registry_store::traits::leader_elector::{ElectorRole, LeaderAware, LeaderElector};
 use sofa_registry_server_meta::leader::MetaLeaderElector;
+use sofa_registry_store::jdbc::{create_pool, run_migrations, SqliteDistributeLockRepo};
+use sofa_registry_store::traits::leader_elector::{ElectorRole, LeaderAware, LeaderElector};
 use tokio_util::sync::CancellationToken;
 
 /// Helper: create an in-memory SQLite pool and run migrations.
 async fn setup_db() -> sqlx::SqlitePool {
-    let pool = create_pool("sqlite::memory:").await.expect("Failed to create in-memory pool");
-    run_migrations(&pool).await.expect("Failed to run migrations");
+    let pool = create_pool("sqlite::memory:")
+        .await
+        .expect("Failed to create in-memory pool");
+    run_migrations(&pool)
+        .await
+        .expect("Failed to run migrations");
     pool
 }
 
 /// Helper: create a MetaLeaderElector backed by the given pool.
-fn make_elector(
-    pool: sqlx::SqlitePool,
-    address: &str,
-    lock_duration_ms: i64,
-) -> MetaLeaderElector {
+fn make_elector(pool: sqlx::SqlitePool, address: &str, lock_duration_ms: i64) -> MetaLeaderElector {
     let lock_repo = Arc::new(SqliteDistributeLockRepo::new(pool));
     MetaLeaderElector::new(
         lock_repo,

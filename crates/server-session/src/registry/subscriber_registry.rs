@@ -29,10 +29,7 @@ impl SubscriberRegistry {
 
         // Update by_connection index
         let is_new = {
-            let mut conn_entry = self
-                .by_connection
-                .entry(connect_id)
-                .or_default();
+            let mut conn_entry = self.by_connection.entry(connect_id).or_default();
             conn_entry
                 .insert(regist_id.clone(), subscriber.clone())
                 .is_none()
@@ -40,10 +37,7 @@ impl SubscriberRegistry {
 
         // Update by_data_info_id index
         {
-            let mut list = self
-                .by_data_info_id
-                .entry(data_info_id)
-                .or_default();
+            let mut list = self.by_data_info_id.entry(data_info_id).or_default();
             list.retain(|s| s.regist_id != regist_id);
             list.push(subscriber);
         }

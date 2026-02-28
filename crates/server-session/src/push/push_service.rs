@@ -27,7 +27,13 @@ impl PushService {
     /// Returns the service (sender) and the receiver that processes tasks.
     pub fn new(buffer_size: usize, stream_registry: Arc<StreamRegistry>) -> (Self, PushReceiver) {
         let (tx, rx) = mpsc::channel(buffer_size);
-        (Self { tx }, PushReceiver { rx, stream_registry })
+        (
+            Self { tx },
+            PushReceiver {
+                rx,
+                stream_registry,
+            },
+        )
     }
 
     /// Enqueue a push task. If the channel is full, logs a warning and drops.
@@ -105,10 +111,7 @@ impl PushReceiver {
                         metrics::counter!(srv_metrics::SESSION_PUSH_TASKS_FAILED).increment(1);
                     }
                     Err(mpsc::error::TrySendError::Closed(_)) => {
-                        debug!(
-                            "Client stream closed for regist_id={}, removing",
-                            regist_id
-                        );
+                        debug!("Client stream closed for regist_id={}, removing", regist_id);
                         self.stream_registry.unregister(regist_id);
                         metrics::counter!(srv_metrics::SESSION_PUSH_TASKS_FAILED).increment(1);
                     }

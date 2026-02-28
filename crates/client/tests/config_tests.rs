@@ -70,10 +70,7 @@ fn config_can_be_constructed_with_custom_values() {
         zone: "us-east-1".to_string(),
         app_name: "my-service".to_string(),
         data_center: "DC1".to_string(),
-        session_server_addresses: vec![
-            "10.0.0.1:9601".to_string(),
-            "10.0.0.2:9601".to_string(),
-        ],
+        session_server_addresses: vec!["10.0.0.1:9601".to_string(), "10.0.0.2:9601".to_string()],
         connect_timeout_ms: 3000,
         request_timeout_ms: 5000,
         reconnect_delay_ms: 500,
@@ -107,7 +104,8 @@ fn config_clone_produces_independent_copy() {
     };
     let mut cfg2 = cfg1.clone();
     cfg2.instance_id = "clone".to_string();
-    cfg2.session_server_addresses.push("10.0.0.3:9601".to_string());
+    cfg2.session_server_addresses
+        .push("10.0.0.3:9601".to_string());
 
     assert_eq!(cfg1.instance_id, "original");
     assert_eq!(cfg2.instance_id, "clone");

@@ -62,8 +62,10 @@ impl SlotDiffSyncer {
     /// - `removed`: data_info_ids that exist locally but not on the remote
     ///   (follower should delete them).
     pub fn diff_digests(local: &[DatumDigest], remote: &[DatumDigest]) -> DiffResult {
-        let remote_map: HashMap<&str, &DatumDigest> =
-            remote.iter().map(|d| (d.data_info_id.as_str(), d)).collect();
+        let remote_map: HashMap<&str, &DatumDigest> = remote
+            .iter()
+            .map(|d| (d.data_info_id.as_str(), d))
+            .collect();
 
         let local_map: HashMap<&str, &DatumDigest> =
             local.iter().map(|d| (d.data_info_id.as_str(), d)).collect();

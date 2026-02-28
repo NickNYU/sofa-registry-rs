@@ -30,10 +30,7 @@ impl PublisherRegistry {
 
         // Update by_connection index
         let is_new = {
-            let mut conn_entry = self
-                .by_connection
-                .entry(connect_id)
-                .or_default();
+            let mut conn_entry = self.by_connection.entry(connect_id).or_default();
             // Key by data_info_id so that one connection can publish to multiple data_info_ids
             // but only one publisher per data_info_id per connection is kept (keyed by regist_id
             // below we actually key by data_info_id for the connection-level map).
@@ -45,10 +42,7 @@ impl PublisherRegistry {
 
         // Update by_data_info_id index
         {
-            let mut list = self
-                .by_data_info_id
-                .entry(data_info_id)
-                .or_default();
+            let mut list = self.by_data_info_id.entry(data_info_id).or_default();
             // Remove any existing entry with same regist_id
             list.retain(|p| p.regist_id != regist_id);
             list.push(publisher);

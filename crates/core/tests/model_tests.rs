@@ -159,8 +159,15 @@ fn data_box_empty_serialization_roundtrip() {
 
 #[test]
 fn data_info_to_data_info_id() {
-    let result = DataInfo::to_data_info_id("com.example.Service", "DEFAULT_INSTANCE_ID", "DEFAULT_GROUP");
-    assert_eq!(result, "com.example.Service#DEFAULT_INSTANCE_ID#DEFAULT_GROUP");
+    let result = DataInfo::to_data_info_id(
+        "com.example.Service",
+        "DEFAULT_INSTANCE_ID",
+        "DEFAULT_GROUP",
+    );
+    assert_eq!(
+        result,
+        "com.example.Service#DEFAULT_INSTANCE_ID#DEFAULT_GROUP"
+    );
 }
 
 #[test]
@@ -296,7 +303,10 @@ fn scope_display_global() {
 #[test]
 fn scope_serialize() {
     assert_eq!(serde_json::to_string(&Scope::Zone).unwrap(), "\"zone\"");
-    assert_eq!(serde_json::to_string(&Scope::DataCenter).unwrap(), "\"dataCenter\"");
+    assert_eq!(
+        serde_json::to_string(&Scope::DataCenter).unwrap(),
+        "\"dataCenter\""
+    );
     assert_eq!(serde_json::to_string(&Scope::Global).unwrap(), "\"global\"");
 }
 
@@ -515,7 +525,10 @@ fn datum_version_serialization_roundtrip() {
 #[test]
 fn datum_new_empty_parses_data_info_id() {
     let datum = Datum::new_empty("com.example.Service#default#DEFAULT_GROUP", "dc1");
-    assert_eq!(datum.data_info_id, "com.example.Service#default#DEFAULT_GROUP");
+    assert_eq!(
+        datum.data_info_id,
+        "com.example.Service#default#DEFAULT_GROUP"
+    );
     assert_eq!(datum.data_center, "dc1");
     assert_eq!(datum.data_id, "com.example.Service");
     assert_eq!(datum.instance_id, "default");
@@ -733,8 +746,14 @@ fn base_register_attributes_map() {
 
     let json = serde_json::to_string(&br).unwrap();
     let deserialized: BaseRegister = serde_json::from_str(&json).unwrap();
-    assert_eq!(deserialized.attributes.get("key1"), Some(&"val1".to_string()));
-    assert_eq!(deserialized.attributes.get("key2"), Some(&"val2".to_string()));
+    assert_eq!(
+        deserialized.attributes.get("key1"),
+        Some(&"val1".to_string())
+    );
+    assert_eq!(
+        deserialized.attributes.get("key2"),
+        Some(&"val2".to_string())
+    );
 }
 
 // ===========================================================================

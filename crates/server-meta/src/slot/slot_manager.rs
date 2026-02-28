@@ -1,9 +1,9 @@
-use std::sync::Arc;
-use parking_lot::RwLock;
-use tracing::{info, warn};
-use sofa_registry_core::slot::{SlotTable, SlotConfig};
 use super::slot_allocator::SlotAllocator;
 use crate::lease::DataServerManager;
+use parking_lot::RwLock;
+use sofa_registry_core::slot::{SlotConfig, SlotTable};
+use std::sync::Arc;
+use tracing::{info, warn};
 
 /// Manages the global slot table in the Meta server.
 /// Responsible for initial allocation and rebalancing when data servers change.
@@ -36,14 +36,14 @@ impl MetaSlotManager {
     /// Returns true if the slot table was updated.
     pub fn try_assign_or_rebalance(&self) -> bool {
         let servers = self.data_server_manager.get_data_server_addresses();
-        
+
         if servers.is_empty() {
             warn!("No data servers available for slot assignment");
             return false;
         }
 
         let current = self.slot_table.read().clone();
-        
+
         if current.is_empty() {
             // Initial assignment
             if let Some(new_table) = SlotAllocator::allocate(
@@ -53,22 +53,29 @@ impl MetaSlotManager {
                 1,
             ) {
                 let stats = SlotAllocator::get_distribution_stats(&new_table);
-                info!("Initial slot assignment: {} slots across {} servers", 
-                    new_table.slot_count(), stats.len());
+                info!(
+                    "Initial slot assignment: {} slots across {} servers",
+                    new_table.slot_count(),
+                    stats.len()
+                );
                 for (server, (leaders, followers)) in &stats {
-                    info!("  {} -> {} leaders, {} followers", server, leaders, followers);
+                    info!(
+                        "  {} -> {} leaders, {} followers",
+                        server, leaders, followers
+                    );
                 }
                 *self.slot_table.write() = new_table;
                 return true;
             }
         } else {
             // Rebalance
-            if let Some(new_table) = SlotAllocator::rebalance(
-                &current,
-                &servers,
-                self.slot_config.slot_replicas,
-            ) {
-                info!("Slot table rebalanced: epoch {} -> {}", current.epoch, new_table.epoch);
+            if let Some(new_table) =
+                SlotAllocator::rebalance(&current, &servers, self.slot_config.slot_replicas)
+            {
+                info!(
+                    "Slot table rebalanced: epoch {} -> {}",
+                    current.epoch, new_table.epoch
+                );
                 *self.slot_table.write() = new_table;
                 return true;
             }
@@ -89,13 +96,14 @@ impl MetaSlotManager {
         if current.is_empty() {
             return self.data_server_manager.count() > 0;
         }
-        
+
         let current_servers = current.get_data_servers();
-        let active_servers: std::collections::BTreeSet<String> = self.data_server_manager
+        let active_servers: std::collections::BTreeSet<String> = self
+            .data_server_manager
             .get_data_server_addresses()
             .into_iter()
             .collect();
-        
+
         current_servers != active_servers
     }
 }
@@ -110,9 +118,9 @@ mod tests {
         let data_mgr = Arc::new(DataServerManager::new(30));
         data_mgr.register(DataNode::new("10.0.0.1:9621", "dc1", "c1"));
         data_mgr.register(DataNode::new("10.0.0.2:9621", "dc1", "c1"));
-        
+
         let slot_mgr = MetaSlotManager::new(SlotConfig::default(), data_mgr);
-        
+
         assert!(slot_mgr.get_slot_table().is_empty());
         assert!(slot_mgr.try_assign_or_rebalance());
         assert!(!slot_mgr.get_slot_table().is_empty());

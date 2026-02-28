@@ -172,7 +172,10 @@ fn crc32c_slot_distribution_is_reasonably_uniform() {
     let mut counts = vec![0u32; slot_num as usize];
 
     for i in 0..num_keys {
-        let id = format!("com.example.service.{}#DEFAULT_INSTANCE_ID#DEFAULT_GROUP", i);
+        let id = format!(
+            "com.example.service.{}#DEFAULT_INSTANCE_ID#DEFAULT_GROUP",
+            i
+        );
         let slot = func.slot_of(&id, slot_num);
         counts[slot as usize] += 1;
     }
@@ -219,10 +222,7 @@ fn create_slot_function_matches_direct_construction() {
     let direct_func = Crc32cSlotFunction;
     let id = "com.example.Service#default#DEFAULT_GROUP";
 
-    assert_eq!(
-        factory_func.slot_of(id, 256),
-        direct_func.slot_of(id, 256),
-    );
+    assert_eq!(factory_func.slot_of(id, 256), direct_func.slot_of(id, 256),);
 }
 
 // ===========================================================================

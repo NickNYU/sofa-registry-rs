@@ -57,33 +57,15 @@ pub type Result<T> = std::result::Result<T, RegistryError>;
 impl From<RegistryError> for tonic::Status {
     fn from(err: RegistryError) -> Self {
         match &err {
-            RegistryError::NotLeader => {
-                tonic::Status::failed_precondition(err.to_string())
-            }
-            RegistryError::SlotMoved { .. } => {
-                tonic::Status::unavailable(err.to_string())
-            }
-            RegistryError::SlotAccessDenied(_) => {
-                tonic::Status::permission_denied(err.to_string())
-            }
-            RegistryError::Refused(_) => {
-                tonic::Status::permission_denied(err.to_string())
-            }
-            RegistryError::Duplicate(_) => {
-                tonic::Status::already_exists(err.to_string())
-            }
-            RegistryError::NotFound(_) => {
-                tonic::Status::not_found(err.to_string())
-            }
-            RegistryError::Auth(_) => {
-                tonic::Status::unauthenticated(err.to_string())
-            }
-            RegistryError::Timeout(_) => {
-                tonic::Status::deadline_exceeded(err.to_string())
-            }
-            RegistryError::Config(_) => {
-                tonic::Status::invalid_argument(err.to_string())
-            }
+            RegistryError::NotLeader => tonic::Status::failed_precondition(err.to_string()),
+            RegistryError::SlotMoved { .. } => tonic::Status::unavailable(err.to_string()),
+            RegistryError::SlotAccessDenied(_) => tonic::Status::permission_denied(err.to_string()),
+            RegistryError::Refused(_) => tonic::Status::permission_denied(err.to_string()),
+            RegistryError::Duplicate(_) => tonic::Status::already_exists(err.to_string()),
+            RegistryError::NotFound(_) => tonic::Status::not_found(err.to_string()),
+            RegistryError::Auth(_) => tonic::Status::unauthenticated(err.to_string()),
+            RegistryError::Timeout(_) => tonic::Status::deadline_exceeded(err.to_string()),
+            RegistryError::Config(_) => tonic::Status::invalid_argument(err.to_string()),
             RegistryError::Connection(_) | RegistryError::Remoting(_) => {
                 tonic::Status::unavailable(err.to_string())
             }

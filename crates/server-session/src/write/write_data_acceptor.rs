@@ -16,8 +16,13 @@ use crate::slot::SessionSlotManager;
 
 /// Describes a write that should be forwarded to the data server.
 pub enum WriteRequest {
-    Publish { publisher: Box<Publisher> },
-    Unpublish { data_info_id: String, regist_id: String },
+    Publish {
+        publisher: Box<Publisher>,
+    },
+    Unpublish {
+        data_info_id: String,
+        regist_id: String,
+    },
 }
 
 /// Sender side: accepts writes and enqueues them for batch forwarding.
@@ -115,7 +120,8 @@ impl WriteDataReceiver {
     async fn forward_publish(&self, publisher: Publisher) {
         let data_info_id = &publisher.data_info_id;
 
-        metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_TOTAL, "op" => "publish").increment(1);
+        metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_TOTAL, "op" => "publish")
+            .increment(1);
 
         let (slot_id, leader) = match self.slot_manager.get_leader_for_data(data_info_id) {
             Some(v) => v,
@@ -124,7 +130,8 @@ impl WriteDataReceiver {
                     "No slot leader for data_info_id={}, dropping publish",
                     data_info_id
                 );
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish")
+                    .increment(1);
                 return;
             }
         };
@@ -139,7 +146,8 @@ impl WriteDataReceiver {
             Err(e) => {
                 error!("Failed to connect to data server {}: {}", leader, e);
                 self.pool.remove_channel(&leader);
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish")
+                    .increment(1);
                 return;
             }
         };
@@ -165,18 +173,17 @@ impl WriteDataReceiver {
                 }
             }
             Err(e) => {
-                error!(
-                    "Failed to forward publish to data server {}: {}",
-                    leader, e
-                );
+                error!("Failed to forward publish to data server {}: {}", leader, e);
                 self.pool.remove_channel(&leader);
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "publish")
+                    .increment(1);
             }
         }
     }
 
     async fn forward_unpublish(&self, data_info_id: &str, regist_id: &str) {
-        metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_TOTAL, "op" => "unpublish").increment(1);
+        metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_TOTAL, "op" => "unpublish")
+            .increment(1);
 
         let (slot_id, leader) = match self.slot_manager.get_leader_for_data(data_info_id) {
             Some(v) => v,
@@ -185,7 +192,8 @@ impl WriteDataReceiver {
                     "No slot leader for data_info_id={}, dropping unpublish",
                     data_info_id
                 );
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish")
+                    .increment(1);
                 return;
             }
         };
@@ -200,7 +208,8 @@ impl WriteDataReceiver {
             Err(e) => {
                 error!("Failed to connect to data server {}: {}", leader, e);
                 self.pool.remove_channel(&leader);
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish")
+                    .increment(1);
                 return;
             }
         };
@@ -233,7 +242,8 @@ impl WriteDataReceiver {
                     leader, e
                 );
                 self.pool.remove_channel(&leader);
-                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish").increment(1);
+                metrics::counter!(srv_metrics::SESSION_WRITE_FORWARDS_FAILED, "op" => "unpublish")
+                    .increment(1);
             }
         }
     }

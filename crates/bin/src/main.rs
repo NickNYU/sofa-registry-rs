@@ -4,7 +4,11 @@ use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
-#[command(name = "sofa-registry", version, about = "SOFARegistry - High-performance service registry in Rust")]
+#[command(
+    name = "sofa-registry",
+    version,
+    about = "SOFARegistry - High-performance service registry in Rust"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -122,31 +126,81 @@ struct McpSection {
 }
 
 // Default value functions
-fn default_data_center() -> String { "DefaultDataCenter".into() }
-fn default_cluster_id() -> String { "DefaultCluster".into() }
-fn default_local_address() -> String { detect_local_ip() }
-fn default_meta_grpc_port() -> u16 { 9611 }
-fn default_meta_http_port() -> u16 { 9612 }
-fn default_db_url() -> String { "sqlite://sofa-registry-meta.db?mode=rwc".into() }
-fn default_meta_peers() -> Vec<String> { vec!["127.0.0.1:9611".into()] }
-fn default_session_lease_secs() -> u64 { 30 }
-fn default_data_lease_secs() -> u64 { 30 }
-fn default_slot_num() -> u32 { 256 }
-fn default_slot_replicas() -> u32 { 2 }
-fn default_election_lock_duration_ms() -> i64 { 30000 }
-fn default_election_interval_ms() -> u64 { 1000 }
-fn default_data_grpc_port() -> u16 { 9621 }
-fn default_data_http_port() -> u16 { 9622 }
-fn default_meta_addresses() -> Vec<String> { vec!["127.0.0.1:9611".into()] }
-fn default_slot_sync_interval() -> u64 { 6 }
-fn default_data_change_debounce_ms() -> u64 { 500 }
-fn default_session_grpc_port() -> u16 { 9601 }
-fn default_session_http_port() -> u16 { 9602 }
-fn default_push_task_timeout_ms() -> u64 { 3000 }
-fn default_push_task_buffer_size() -> usize { 10000 }
-fn default_meta_http_url() -> String { "http://127.0.0.1:9612".into() }
-fn default_session_http_url() -> String { "http://127.0.0.1:9602".into() }
-fn default_data_http_url() -> String { "http://127.0.0.1:9622".into() }
+fn default_data_center() -> String {
+    "DefaultDataCenter".into()
+}
+fn default_cluster_id() -> String {
+    "DefaultCluster".into()
+}
+fn default_local_address() -> String {
+    detect_local_ip()
+}
+fn default_meta_grpc_port() -> u16 {
+    9611
+}
+fn default_meta_http_port() -> u16 {
+    9612
+}
+fn default_db_url() -> String {
+    "sqlite://sofa-registry-meta.db?mode=rwc".into()
+}
+fn default_meta_peers() -> Vec<String> {
+    vec!["127.0.0.1:9611".into()]
+}
+fn default_session_lease_secs() -> u64 {
+    30
+}
+fn default_data_lease_secs() -> u64 {
+    30
+}
+fn default_slot_num() -> u32 {
+    256
+}
+fn default_slot_replicas() -> u32 {
+    2
+}
+fn default_election_lock_duration_ms() -> i64 {
+    30000
+}
+fn default_election_interval_ms() -> u64 {
+    1000
+}
+fn default_data_grpc_port() -> u16 {
+    9621
+}
+fn default_data_http_port() -> u16 {
+    9622
+}
+fn default_meta_addresses() -> Vec<String> {
+    vec!["127.0.0.1:9611".into()]
+}
+fn default_slot_sync_interval() -> u64 {
+    6
+}
+fn default_data_change_debounce_ms() -> u64 {
+    500
+}
+fn default_session_grpc_port() -> u16 {
+    9601
+}
+fn default_session_http_port() -> u16 {
+    9602
+}
+fn default_push_task_timeout_ms() -> u64 {
+    3000
+}
+fn default_push_task_buffer_size() -> usize {
+    10000
+}
+fn default_meta_http_url() -> String {
+    "http://127.0.0.1:9612".into()
+}
+fn default_session_http_url() -> String {
+    "http://127.0.0.1:9602".into()
+}
+fn default_data_http_url() -> String {
+    "http://127.0.0.1:9622".into()
+}
 
 /// Detect the local machine's IP by connecting a UDP socket.
 fn detect_local_ip() -> String {
@@ -181,7 +235,11 @@ fn load_config(path: &str) -> anyhow::Result<AppConfig> {
                 mcp: McpSection::default(),
             })
         }
-        Err(e) => Err(anyhow::anyhow!("Failed to read config file {}: {}", path, e)),
+        Err(e) => Err(anyhow::anyhow!(
+            "Failed to read config file {}: {}",
+            path,
+            e
+        )),
     }
 }
 
@@ -251,8 +309,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new(&cli.log_level)),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&cli.log_level)),
         )
         .with_target(true)
         .with_thread_ids(true)
@@ -292,16 +349,20 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_meta(config: sofa_registry_server_meta::config::MetaServerConfig) -> anyhow::Result<()> {
-    let pool = sofa_registry_store::jdbc::create_pool(&config.db_url).await
+async fn run_meta(
+    config: sofa_registry_server_meta::config::MetaServerConfig,
+) -> anyhow::Result<()> {
+    let pool = sofa_registry_store::jdbc::create_pool(&config.db_url)
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to create DB pool: {}", e))?;
 
-    sofa_registry_store::jdbc::run_migrations(&pool).await
+    sofa_registry_store::jdbc::run_migrations(&pool)
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
 
-    let lock_repo = std::sync::Arc::new(
-        sofa_registry_store::jdbc::SqliteDistributeLockRepo::new(pool),
-    );
+    let lock_repo = std::sync::Arc::new(sofa_registry_store::jdbc::SqliteDistributeLockRepo::new(
+        pool,
+    ));
 
     let server = sofa_registry_server_meta::server::MetaServer::new(config, lock_repo).await;
     server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
@@ -312,7 +373,9 @@ async fn run_meta(config: sofa_registry_server_meta::config::MetaServerConfig) -
     Ok(())
 }
 
-async fn run_data(config: sofa_registry_server_data::config::DataServerConfig) -> anyhow::Result<()> {
+async fn run_data(
+    config: sofa_registry_server_data::config::DataServerConfig,
+) -> anyhow::Result<()> {
     let mut server = sofa_registry_server_data::server::DataServer::new(config);
     server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -322,7 +385,9 @@ async fn run_data(config: sofa_registry_server_data::config::DataServerConfig) -
     Ok(())
 }
 
-async fn run_session(config: sofa_registry_server_session::config::SessionServerConfig) -> anyhow::Result<()> {
+async fn run_session(
+    config: sofa_registry_server_session::config::SessionServerConfig,
+) -> anyhow::Result<()> {
     let mut server = sofa_registry_server_session::server::SessionServer::new(config);
     server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
 
@@ -334,7 +399,10 @@ async fn run_session(config: sofa_registry_server_session::config::SessionServer
 
 async fn run_mcp(config: sofa_registry_mcp::server::McpConfig) -> anyhow::Result<()> {
     let server = sofa_registry_mcp::server::McpServer::new(config)?;
-    server.run_stdio().await.map_err(|e| anyhow::anyhow!("{}", e))
+    server
+        .run_stdio()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))
 }
 
 async fn run_all(app_config: AppConfig) -> anyhow::Result<()> {
@@ -346,16 +414,22 @@ async fn run_all(app_config: AppConfig) -> anyhow::Result<()> {
 
     // Start meta first
     let meta_db_url = meta_config.db_url.clone();
-    let pool = sofa_registry_store::jdbc::create_pool(&meta_db_url).await
+    let pool = sofa_registry_store::jdbc::create_pool(&meta_db_url)
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to create DB pool: {}", e))?;
-    sofa_registry_store::jdbc::run_migrations(&pool).await
+    sofa_registry_store::jdbc::run_migrations(&pool)
+        .await
         .map_err(|e| anyhow::anyhow!("Failed to run migrations: {}", e))?;
-    let lock_repo = std::sync::Arc::new(
-        sofa_registry_store::jdbc::SqliteDistributeLockRepo::new(pool),
-    );
+    let lock_repo = std::sync::Arc::new(sofa_registry_store::jdbc::SqliteDistributeLockRepo::new(
+        pool,
+    ));
 
-    let meta_server = sofa_registry_server_meta::server::MetaServer::new(meta_config, lock_repo).await;
-    meta_server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
+    let meta_server =
+        sofa_registry_server_meta::server::MetaServer::new(meta_config, lock_repo).await;
+    meta_server
+        .start()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     info!("Meta server started");
 
     // Give meta time to elect leader
@@ -363,15 +437,22 @@ async fn run_all(app_config: AppConfig) -> anyhow::Result<()> {
 
     // Start data
     let mut data_server = sofa_registry_server_data::server::DataServer::new(data_config);
-    data_server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
+    data_server
+        .start()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     info!("Data server started");
 
     // Give data time to register with meta
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     // Start session
-    let mut session_server = sofa_registry_server_session::server::SessionServer::new(session_config);
-    session_server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
+    let mut session_server =
+        sofa_registry_server_session::server::SessionServer::new(session_config);
+    session_server
+        .start()
+        .await
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
     info!("Session server started");
 
     info!("All servers started. Press Ctrl-C to stop.");

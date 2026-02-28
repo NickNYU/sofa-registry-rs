@@ -131,11 +131,7 @@ impl DatumStorage for LocalDatumStorage {
         updated
     }
 
-    fn get_publishers(
-        &self,
-        data_center: &str,
-        data_info_id: &str,
-    ) -> HashMap<String, Publisher> {
+    fn get_publishers(&self, data_center: &str, data_info_id: &str) -> HashMap<String, Publisher> {
         if let Some(dc_map) = self.store.get(data_center) {
             if let Some(group) = dc_map.get(data_info_id) {
                 return group.publishers.clone();

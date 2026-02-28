@@ -1,3 +1,4 @@
+use chrono::Utc;
 use sofa_registry_store::jdbc::{
     create_pool, run_migrations, SqliteAppRevisionRepo, SqliteClientManagerRepo,
     SqliteDistributeLockRepo, SqliteInterfaceAppsRepo, SqliteProvideDataRepo,
@@ -6,7 +7,6 @@ use sofa_registry_store::traits::{
     AppRevision, AppRevisionRepository, ClientManagerAddressRepository, DistributeLockRepository,
     InterfaceAppsRepository, PersistenceData, ProvideDataRepository,
 };
-use chrono::Utc;
 use std::collections::HashMap;
 
 // ---------------------------------------------------------------------------
@@ -14,7 +14,9 @@ use std::collections::HashMap;
 // ---------------------------------------------------------------------------
 
 async fn setup_pool() -> sqlx::SqlitePool {
-    let pool = create_pool("sqlite::memory:").await.expect("pool creation failed");
+    let pool = create_pool("sqlite::memory:")
+        .await
+        .expect("pool creation failed");
     run_migrations(&pool).await.expect("migrations failed");
     pool
 }
@@ -263,7 +265,10 @@ async fn app_revision_heartbeat() {
     let rev = make_app_revision("dc1", "rev-hb", "my-app");
     repo.register(rev).await.unwrap();
 
-    let result = repo.heartbeat("rev-hb").await.expect("heartbeat should succeed");
+    let result = repo
+        .heartbeat("rev-hb")
+        .await
+        .expect("heartbeat should succeed");
     assert!(result, "heartbeat should return true for existing revision");
 }
 
@@ -359,7 +364,10 @@ async fn app_revision_clean_deleted() {
     repo.register(rev3).await.unwrap();
 
     let future = Utc::now() + chrono::Duration::hours(1);
-    let cleaned = repo.clean_deleted(future, 100).await.expect("should succeed");
+    let cleaned = repo
+        .clean_deleted(future, 100)
+        .await
+        .expect("should succeed");
     assert_eq!(cleaned, 2, "two deleted revisions should be cleaned");
 
     // Active one should still exist
@@ -567,7 +575,11 @@ async fn interface_apps_register_idempotent() {
         .get_app_names("dc1", "com.example.ServiceA")
         .await
         .unwrap();
-    assert_eq!(apps.len(), 1, "duplicate register should not create duplicate");
+    assert_eq!(
+        apps.len(),
+        1,
+        "duplicate register should not create duplicate"
+    );
 }
 
 #[tokio::test]
@@ -660,7 +672,10 @@ async fn client_manager_client_on_nonexistent() {
     let repo = SqliteClientManagerRepo::new(pool);
 
     let result = repo.client_on("dc1", "no-addr").await.unwrap();
-    assert!(!result, "client_on for nonexistent address should return false");
+    assert!(
+        !result,
+        "client_on for nonexistent address should return false"
+    );
 }
 
 #[tokio::test]
@@ -672,7 +687,11 @@ async fn client_manager_client_off_idempotent() {
     repo.client_off("dc1", "10.0.0.1:9600").await.unwrap();
 
     let addrs = repo.get_client_off_addresses("dc1").await.unwrap();
-    assert_eq!(addrs.len(), 1, "duplicate client_off should not create duplicate");
+    assert_eq!(
+        addrs.len(),
+        1,
+        "duplicate client_off should not create duplicate"
+    );
 }
 
 #[tokio::test]
@@ -713,8 +732,12 @@ async fn client_manager_multiple_addresses() {
 
 #[tokio::test]
 async fn pool_creation_and_migration_succeeds() {
-    let pool = create_pool("sqlite::memory:").await.expect("pool should be created");
-    run_migrations(&pool).await.expect("migrations should succeed");
+    let pool = create_pool("sqlite::memory:")
+        .await
+        .expect("pool should be created");
+    run_migrations(&pool)
+        .await
+        .expect("migrations should succeed");
 }
 
 #[tokio::test]
@@ -722,5 +745,7 @@ async fn migrations_are_idempotent() {
     let pool = create_pool("sqlite::memory:").await.unwrap();
     run_migrations(&pool).await.unwrap();
     // Running migrations again should not fail because of CREATE TABLE IF NOT EXISTS
-    run_migrations(&pool).await.expect("second migration run should succeed");
+    run_migrations(&pool)
+        .await
+        .expect("second migration run should succeed");
 }

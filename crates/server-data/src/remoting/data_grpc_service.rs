@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use sofa_registry_core::model::{
-    ConnectId, ProcessId, PublishSource, PublishType, Publisher, RegisterVersion,
-    ServerDataBox,
+    ConnectId, ProcessId, PublishSource, PublishType, Publisher, RegisterVersion, ServerDataBox,
 };
 use sofa_registry_core::pb::sofa::registry::data::data_service_server::DataService;
 use sofa_registry_core::pb::sofa::registry::data::{
@@ -231,7 +230,8 @@ impl DataService for DataGrpcService {
         &self,
         request: Request<PublishDataRequest>,
     ) -> Result<Response<PublishDataResponse>, Status> {
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "publish_data").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "publish_data")
+            .increment(1);
 
         let req = request.into_inner();
         let data_center = if req.data_center.is_empty() {
@@ -277,7 +277,8 @@ impl DataService for DataGrpcService {
         &self,
         request: Request<UnPublishDataRequest>,
     ) -> Result<Response<UnPublishDataResponse>, Status> {
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "un_publish_data").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "un_publish_data")
+            .increment(1);
 
         let req = request.into_inner();
         let data_center = if req.data_center.is_empty() {
@@ -313,7 +314,8 @@ impl DataService for DataGrpcService {
         &self,
         request: Request<BatchPutDataRequest>,
     ) -> Result<Response<BatchPutDataResponse>, Status> {
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "batch_put_data").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "batch_put_data")
+            .increment(1);
 
         let req = request.into_inner();
         let data_center = if req.data_center.is_empty() {
@@ -375,7 +377,8 @@ impl DataService for DataGrpcService {
         &self,
         request: Request<SlotDiffDigestRequest>,
     ) -> Result<Response<SlotDiffDigestResponse>, Status> {
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "slot_diff_data").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "slot_diff_data")
+            .increment(1);
 
         let req = request.into_inner();
         let data_center = if req.data_center.is_empty() {

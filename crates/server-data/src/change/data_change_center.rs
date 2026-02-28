@@ -177,14 +177,16 @@ impl DataChangeReceiver {
 
                 match client.notify_data_change(request).await {
                     Ok(_) => {
-                        metrics::counter!(srv_metrics::DATA_CHANGE_NOTIFICATIONS_TOTAL).increment(1);
+                        metrics::counter!(srv_metrics::DATA_CHANGE_NOTIFICATIONS_TOTAL)
+                            .increment(1);
                         debug!(
                             "Notified session {} of change: data_info_id={}",
                             session_addr, data_info_id
                         );
                     }
                     Err(e) => {
-                        metrics::counter!(srv_metrics::DATA_CHANGE_NOTIFICATIONS_FAILED).increment(1);
+                        metrics::counter!(srv_metrics::DATA_CHANGE_NOTIFICATIONS_FAILED)
+                            .increment(1);
                         warn!(
                             "Failed to notify session {} of change {}: {}",
                             session_addr, data_info_id, e

@@ -1,5 +1,5 @@
 use sofa_registry_core::model::{
-    ConnectId, ProcessId, Publisher, PublishSource, PublishType, RegisterVersion,
+    ConnectId, ProcessId, PublishSource, PublishType, Publisher, RegisterVersion,
 };
 use sofa_registry_server_session::registry::PublisherRegistry;
 use std::collections::HashMap;

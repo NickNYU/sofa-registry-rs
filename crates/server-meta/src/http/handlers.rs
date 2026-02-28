@@ -1,9 +1,9 @@
-use axum::{Json, extract::State};
-use serde::Serialize;
-use std::sync::Arc;
 use crate::server::MetaServerState;
-use sofa_registry_store::traits::leader_elector::LeaderElector;
+use axum::{extract::State, Json};
+use serde::Serialize;
 use sofa_registry_core::slot::SlotTable;
+use sofa_registry_store::traits::leader_elector::LeaderElector;
+use std::sync::Arc;
 
 #[derive(Serialize)]
 pub(crate) struct HealthResponse {
@@ -32,7 +32,11 @@ pub(crate) async fn health_check(
 ) -> Json<HealthResponse> {
     let leader_info = state.leader_elector.get_leader_info();
     Json(HealthResponse {
-        status: if leader_info.is_valid() { "UP".to_string() } else { "DOWN".to_string() },
+        status: if leader_info.is_valid() {
+            "UP".to_string()
+        } else {
+            "DOWN".to_string()
+        },
         leader: leader_info.leader,
         epoch: leader_info.epoch,
         data_server_count: state.data_server_manager.count(),
@@ -40,9 +44,7 @@ pub(crate) async fn health_check(
     })
 }
 
-pub(crate) async fn get_leader(
-    State(state): State<Arc<MetaServerState>>,
-) -> Json<LeaderResponse> {
+pub(crate) async fn get_leader(State(state): State<Arc<MetaServerState>>) -> Json<LeaderResponse> {
     let leader_info = state.leader_elector.get_leader_info();
     Json(LeaderResponse {
         leader: leader_info.leader,
@@ -51,9 +53,7 @@ pub(crate) async fn get_leader(
     })
 }
 
-pub(crate) async fn get_slot_table(
-    State(state): State<Arc<MetaServerState>>,
-) -> Json<SlotTable> {
+pub(crate) async fn get_slot_table(State(state): State<Arc<MetaServerState>>) -> Json<SlotTable> {
     Json(state.slot_manager.get_slot_table())
 }
 
@@ -72,4 +72,3 @@ pub(crate) async fn list_session_servers(
     let count = nodes.len();
     Json(NodeListResponse { nodes, count })
 }
-

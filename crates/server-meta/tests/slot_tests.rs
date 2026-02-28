@@ -110,7 +110,12 @@ fn test_allocate_three_servers_with_three_replicas() {
 
     // replica=3 means 1 leader + 2 followers
     for slot in table.slots.values() {
-        assert_eq!(slot.followers.len(), 2, "Slot {} expected 2 followers", slot.id);
+        assert_eq!(
+            slot.followers.len(),
+            2,
+            "Slot {} expected 2 followers",
+            slot.id
+        );
         assert!(!slot.followers.contains(&slot.leader));
     }
 }
@@ -138,7 +143,11 @@ fn test_allocate_replica_one_means_no_followers() {
     let table = SlotAllocator::allocate(10, 1, &servers, 1).unwrap();
 
     for slot in table.slots.values() {
-        assert!(slot.followers.is_empty(), "Slot {} should have no followers", slot.id);
+        assert!(
+            slot.followers.is_empty(),
+            "Slot {} should have no followers",
+            slot.id
+        );
     }
 }
 
@@ -156,12 +165,9 @@ fn test_allocate_round_robin_leaders() {
     for (slot_id, slot) in &table.slots {
         let expected_idx = *slot_id as usize % 3;
         assert_eq!(
-            slot.leader,
-            servers[expected_idx],
+            slot.leader, servers[expected_idx],
             "Slot {} expected leader {}, got {}",
-            slot_id,
-            servers[expected_idx],
-            slot.leader
+            slot_id, servers[expected_idx], slot.leader
         );
     }
 }
@@ -296,7 +302,12 @@ fn test_rebalance_preserves_slot_count() {
     let servers = vec!["a".to_string(), "b".to_string()];
     let table = SlotAllocator::allocate(128, 2, &servers, 5).unwrap();
 
-    let new_servers = vec!["a".to_string(), "b".to_string(), "c".to_string(), "d".to_string()];
+    let new_servers = vec![
+        "a".to_string(),
+        "b".to_string(),
+        "c".to_string(),
+        "d".to_string(),
+    ];
     let new_table = SlotAllocator::rebalance(&table, &new_servers, 2).unwrap();
 
     assert_eq!(new_table.slot_count(), 128);

@@ -1,21 +1,17 @@
-use std::sync::Arc;
-use tonic::{Request, Response, Status};
-use tracing::{info, debug};
-use sofa_registry_store::traits::leader_elector::LeaderElector;
+use crate::lease::data_server_manager::DataNode;
+use crate::lease::session_server_manager::SessionNode;
+use crate::server::MetaServerState;
 use sofa_registry_core::pb::sofa::registry::meta::{
-    meta_service_server::MetaService,
-    HeartbeatRequest, HeartbeatResponse,
-    GetSlotTableRequest, GetSlotTableResponse,
-    RegisterNodeRequest, RegisterNodeResponse,
-    RenewNodeRequest, RenewNodeResponse,
-    GetLeaderRequest, GetLeaderResponse,
-    SlotTablePb, SlotPb,
+    meta_service_server::MetaService, GetLeaderRequest, GetLeaderResponse, GetSlotTableRequest,
+    GetSlotTableResponse, HeartbeatRequest, HeartbeatResponse, RegisterNodeRequest,
+    RegisterNodeResponse, RenewNodeRequest, RenewNodeResponse, SlotPb, SlotTablePb,
 };
 use sofa_registry_core::slot::SlotTable;
 use sofa_registry_server_shared::metrics as srv_metrics;
-use crate::server::MetaServerState;
-use crate::lease::data_server_manager::DataNode;
-use crate::lease::session_server_manager::SessionNode;
+use sofa_registry_store::traits::leader_elector::LeaderElector;
+use std::sync::Arc;
+use tonic::{Request, Response, Status};
+use tracing::{debug, info};
 
 pub struct MetaGrpcServiceImpl {
     state: Arc<MetaServerState>,
@@ -30,12 +26,16 @@ impl MetaGrpcServiceImpl {
 fn slot_table_to_pb(table: &SlotTable) -> SlotTablePb {
     SlotTablePb {
         epoch: table.epoch,
-        slots: table.slots.values().map(|s| SlotPb {
-            id: s.id,
-            leader: s.leader.clone(),
-            leader_epoch: s.leader_epoch,
-            followers: s.followers.iter().cloned().collect(),
-        }).collect(),
+        slots: table
+            .slots
+            .values()
+            .map(|s| SlotPb {
+                id: s.id,
+                leader: s.leader.clone(),
+                leader_epoch: s.leader_epoch,
+                followers: s.followers.iter().cloned().collect(),
+            })
+            .collect(),
     }
 }
 
@@ -52,13 +52,15 @@ impl MetaService for MetaGrpcServiceImpl {
             "DATA" => {
                 metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "heartbeat_data_server").increment(1);
                 let result = self.state.data_server_manager.renew(&req.address);
-                metrics::gauge!(srv_metrics::META_DATA_SERVERS).set(self.state.data_server_manager.count() as f64);
+                metrics::gauge!(srv_metrics::META_DATA_SERVERS)
+                    .set(self.state.data_server_manager.count() as f64);
                 result
             }
             "SESSION" => {
                 metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "heartbeat_session_server").increment(1);
                 let result = self.state.session_server_manager.renew(&req.address);
-                metrics::gauge!(srv_metrics::META_SESSION_SERVERS).set(self.state.session_server_manager.count() as f64);
+                metrics::gauge!(srv_metrics::META_SESSION_SERVERS)
+                    .set(self.state.session_server_manager.count() as f64);
                 result
             }
             _ => false,
@@ -74,10 +76,11 @@ impl MetaService for MetaGrpcServiceImpl {
         &self,
         request: Request<GetSlotTableRequest>,
     ) -> Result<Response<GetSlotTableResponse>, Status> {
-        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "get_slot_table").increment(1);
+        metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "get_slot_table")
+            .increment(1);
         let req = request.into_inner();
         let table = self.state.slot_manager.get_slot_table();
-        
+
         // If client's epoch matches, return unchanged
         if req.current_epoch == table.epoch {
             return Ok(Response::new(GetSlotTableResponse {
@@ -99,13 +102,16 @@ impl MetaService for MetaGrpcServiceImpl {
         request: Request<RegisterNodeRequest>,
     ) -> Result<Response<RegisterNodeResponse>, Status> {
         let req = request.into_inner();
-        info!("RegisterNode: type={}, address={}", req.node_type, req.address);
+        info!(
+            "RegisterNode: type={}, address={}",
+            req.node_type, req.address
+        );
 
         match req.node_type.as_str() {
             "DATA" => {
                 let node = DataNode::new(&req.address, &req.data_center, &req.cluster_id);
                 self.state.data_server_manager.register(node);
-                
+
                 // Try to assign/rebalance slots when a new data server joins
                 if self.state.leader_elector.am_i_leader() {
                     self.state.slot_manager.try_assign_or_rebalance();
@@ -116,7 +122,10 @@ impl MetaService for MetaGrpcServiceImpl {
                 self.state.session_server_manager.register(node);
             }
             other => {
-                return Err(Status::invalid_argument(format!("Unknown node type: {}", other)));
+                return Err(Status::invalid_argument(format!(
+                    "Unknown node type: {}",
+                    other
+                )));
             }
         }
 
@@ -134,7 +143,7 @@ impl MetaService for MetaGrpcServiceImpl {
     ) -> Result<Response<RenewNodeResponse>, Status> {
         metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "renew_node").increment(1);
         let req = request.into_inner();
-        
+
         let success = match req.node_type.as_str() {
             "DATA" => self.state.data_server_manager.renew(&req.address),
             "SESSION" => self.state.session_server_manager.renew(&req.address),

@@ -55,14 +55,12 @@ impl ProvideDataRepository for SqliteProvideDataRepo {
     }
 
     async fn remove(&self, data_center: &str, data_key: &str) -> Result<bool> {
-        let result = sqlx::query(
-            "DELETE FROM provide_data WHERE data_center = ? AND data_key = ?",
-        )
-        .bind(data_center)
-        .bind(data_key)
-        .execute(&self.pool)
-        .await
-        .map_err(|e| RegistryError::Database(e.to_string()))?;
+        let result = sqlx::query("DELETE FROM provide_data WHERE data_center = ? AND data_key = ?")
+            .bind(data_center)
+            .bind(data_key)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RegistryError::Database(e.to_string()))?;
 
         Ok(result.rows_affected() > 0)
     }

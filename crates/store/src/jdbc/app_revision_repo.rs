@@ -22,7 +22,16 @@ impl SqliteAppRevisionRepo {
     }
 
     fn row_to_revision(
-        row: (String, String, String, Option<String>, Option<String>, i32, String, String),
+        row: (
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            i32,
+            String,
+            String,
+        ),
     ) -> AppRevision {
         let base_params: HashMap<String, String> = row
             .3
@@ -51,8 +60,7 @@ impl SqliteAppRevisionRepo {
 #[async_trait]
 impl AppRevisionRepository for SqliteAppRevisionRepo {
     async fn register(&self, revision: AppRevision) -> Result<()> {
-        let base_params_json =
-            serde_json::to_string(&revision.base_params).unwrap_or_default();
+        let base_params_json = serde_json::to_string(&revision.base_params).unwrap_or_default();
         let service_params_json =
             serde_json::to_string(&revision.service_params).unwrap_or_default();
         let deleted_int: i32 = if revision.deleted { 1 } else { 0 };
@@ -79,16 +87,24 @@ impl AppRevisionRepository for SqliteAppRevisionRepo {
     }
 
     async fn query_revision(&self, revision: &str) -> Result<Option<AppRevision>> {
-        let row: Option<(String, String, String, Option<String>, Option<String>, i32, String, String)> =
-            sqlx::query_as(
-                "SELECT data_center, revision, app_name, base_params, service_params, deleted, \
+        let row: Option<(
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            i32,
+            String,
+            String,
+        )> = sqlx::query_as(
+            "SELECT data_center, revision, app_name, base_params, service_params, deleted, \
                         CAST(gmt_create AS TEXT), CAST(gmt_modified AS TEXT) \
                  FROM app_revision WHERE revision = ?",
-            )
-            .bind(revision)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| RegistryError::Database(e.to_string()))?;
+        )
+        .bind(revision)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RegistryError::Database(e.to_string()))?;
 
         Ok(row.map(Self::row_to_revision))
     }
@@ -107,17 +123,25 @@ impl AppRevisionRepository for SqliteAppRevisionRepo {
 
     async fn get_expired(&self, before: DateTime<Utc>, limit: i32) -> Result<Vec<AppRevision>> {
         let before_str = before.format("%Y-%m-%d %H:%M:%S").to_string();
-        let rows: Vec<(String, String, String, Option<String>, Option<String>, i32, String, String)> =
-            sqlx::query_as(
-                "SELECT data_center, revision, app_name, base_params, service_params, deleted, \
+        let rows: Vec<(
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            i32,
+            String,
+            String,
+        )> = sqlx::query_as(
+            "SELECT data_center, revision, app_name, base_params, service_params, deleted, \
                         CAST(gmt_create AS TEXT), CAST(gmt_modified AS TEXT) \
                  FROM app_revision WHERE gmt_modified < ? AND deleted = 0 LIMIT ?",
-            )
-            .bind(&before_str)
-            .bind(limit)
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| RegistryError::Database(e.to_string()))?;
+        )
+        .bind(&before_str)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RegistryError::Database(e.to_string()))?;
 
         Ok(rows.into_iter().map(Self::row_to_revision).collect())
     }

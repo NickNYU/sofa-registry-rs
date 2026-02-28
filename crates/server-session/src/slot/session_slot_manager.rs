@@ -1,6 +1,6 @@
 use parking_lot::RwLock;
-use sofa_registry_core::slot::{Crc32cSlotFunction, SlotFunction};
 use sofa_registry_core::slot::SlotTable;
+use sofa_registry_core::slot::{Crc32cSlotFunction, SlotFunction};
 
 /// Caches the cluster slot table for routing writes to the correct data server.
 pub struct SessionSlotManager {

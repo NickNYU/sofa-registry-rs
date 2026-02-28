@@ -111,4 +111,3 @@ pub async fn publishers(
         }),
     }
 }
-

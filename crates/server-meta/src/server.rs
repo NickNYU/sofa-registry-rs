@@ -1,19 +1,19 @@
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Server as TonicServer;
-use tracing::{info, error};
+use tracing::{error, info};
 
 use sofa_registry_core::pb::sofa::registry::meta::meta_service_server::MetaServiceServer;
 use sofa_registry_core::slot::SlotConfig;
-use sofa_registry_store::traits::leader_elector::LeaderElector;
 use sofa_registry_server_shared::metrics as srv_metrics;
+use sofa_registry_store::traits::leader_elector::LeaderElector;
 
 use crate::config::MetaServerConfig;
+use crate::grpc::MetaGrpcServiceImpl;
+use crate::http;
 use crate::leader::MetaLeaderElector;
 use crate::lease::{DataServerManager, SessionServerManager};
 use crate::slot::MetaSlotManager;
-use crate::grpc::MetaGrpcServiceImpl;
-use crate::http;
 
 /// Shared state accessible by HTTP handlers and gRPC service
 pub struct MetaServerState {
@@ -49,7 +49,10 @@ impl MetaServer {
             slot_replicas: config.slot_replicas,
             ..Default::default()
         };
-        let slot_manager = Arc::new(MetaSlotManager::new(slot_config, data_server_manager.clone()));
+        let slot_manager = Arc::new(MetaSlotManager::new(
+            slot_config,
+            data_server_manager.clone(),
+        ));
 
         let leader_elector = Arc::new(MetaLeaderElector::new(
             lock_repo,
@@ -82,7 +85,7 @@ impl MetaServer {
         let grpc_addr = format!("0.0.0.0:{}", self.config.grpc_port).parse()?;
         let grpc_service = MetaGrpcServiceImpl::new(self.state.clone());
         let cancel = self.cancel.clone();
-        
+
         tokio::spawn(async move {
             info!("Meta gRPC server listening on {}", grpc_addr);
             let result = TonicServer::builder()
@@ -99,7 +102,7 @@ impl MetaServer {
         let router = http::create_router(self.state.clone());
         let listener = tokio::net::TcpListener::bind(&http_addr).await?;
         let cancel = self.cancel.clone();
-        
+
         tokio::spawn(async move {
             info!("Meta HTTP server listening on {}", http_addr);
             let result = axum::serve(listener, router)
@@ -122,9 +125,8 @@ impl MetaServer {
         let eviction_interval = self.config.eviction_interval_secs;
         let cancel = self.cancel.clone();
         tokio::spawn(async move {
-            let mut ticker = tokio::time::interval(
-                tokio::time::Duration::from_secs(eviction_interval)
-            );
+            let mut ticker =
+                tokio::time::interval(tokio::time::Duration::from_secs(eviction_interval));
             loop {
                 tokio::select! {
                     _ = cancel.cancelled() => break,
@@ -162,7 +164,10 @@ impl MetaServer {
             }
         });
 
-        info!("Meta server started (gRPC={}, HTTP={})", self.config.grpc_port, self.config.http_port);
+        info!(
+            "Meta server started (gRPC={}, HTTP={})",
+            self.config.grpc_port, self.config.http_port
+        );
         Ok(())
     }
 

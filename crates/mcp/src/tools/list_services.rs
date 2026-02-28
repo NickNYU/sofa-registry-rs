@@ -5,11 +5,7 @@ use tracing::debug;
 use crate::server::McpConfig;
 
 /// List all registered services by querying the data server's datum count endpoint.
-pub async fn execute(
-    client: &Client,
-    config: &McpConfig,
-    args: Value,
-) -> Result<String, String> {
+pub async fn execute(client: &Client, config: &McpConfig, args: Value) -> Result<String, String> {
     let _data_center = args
         .get("data_center")
         .and_then(|v| v.as_str())

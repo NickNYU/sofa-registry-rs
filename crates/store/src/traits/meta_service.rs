@@ -21,8 +21,7 @@ pub trait MetaServiceClient: Send + Sync {
 
     /// Fetch the slot table from the meta cluster.
     /// Returns `Ok(None)` if the table is unchanged (same epoch as `current_epoch`).
-    async fn get_slot_table(&self, current_epoch: i64)
-        -> Result<Option<SlotTable>, MetaError>;
+    async fn get_slot_table(&self, current_epoch: i64) -> Result<Option<SlotTable>, MetaError>;
 
     /// The server type this client represents (e.g., "SESSION", "DATA").
     fn server_type(&self) -> &'static str;
@@ -47,19 +46,14 @@ pub enum MetaError {
 impl From<MetaError> for sofa_registry_core::error::RegistryError {
     fn from(err: MetaError) -> Self {
         match err {
-            MetaError::Connection(msg) => {
-                sofa_registry_core::error::RegistryError::Connection(msg)
-            }
-            MetaError::Rpc(msg) => {
-                sofa_registry_core::error::RegistryError::Remoting(msg)
-            }
-            MetaError::Rejected(msg) => {
-                sofa_registry_core::error::RegistryError::Refused(msg)
-            }
+            MetaError::Connection(msg) => sofa_registry_core::error::RegistryError::Connection(msg),
+            MetaError::Rpc(msg) => sofa_registry_core::error::RegistryError::Remoting(msg),
+            MetaError::Rejected(msg) => sofa_registry_core::error::RegistryError::Refused(msg),
             MetaError::AllAddressesFailed(msg) => {
-                sofa_registry_core::error::RegistryError::Connection(
-                    format!("all meta addresses failed for {}", msg),
-                )
+                sofa_registry_core::error::RegistryError::Connection(format!(
+                    "all meta addresses failed for {}",
+                    msg
+                ))
             }
         }
     }
@@ -91,8 +85,7 @@ mod tests {
 
     #[test]
     fn meta_error_all_failed_converts_to_registry_connection() {
-        let err: RegistryError =
-            MetaError::AllAddressesFailed("register_node".into()).into();
+        let err: RegistryError = MetaError::AllAddressesFailed("register_node".into()).into();
         assert!(matches!(err, RegistryError::Connection(_)));
         assert!(err.to_string().contains("register_node"));
     }

@@ -177,10 +177,10 @@ fn multiple_leader_and_follower_slots_mixed() {
     let mgr = DataSlotManager::new(MY_ADDR);
 
     let slots = vec![
-        slot_with_followers(0, MY_ADDR, 1, vec![OTHER_ADDR]),       // leader
-        slot_with_followers(1, OTHER_ADDR, 1, vec![MY_ADDR]),       // follower
-        slot_with_followers(2, MY_ADDR, 1, vec![THIRD_ADDR]),       // leader
-        slot_with_followers(3, THIRD_ADDR, 1, vec![OTHER_ADDR]),    // neither
+        slot_with_followers(0, MY_ADDR, 1, vec![OTHER_ADDR]), // leader
+        slot_with_followers(1, OTHER_ADDR, 1, vec![MY_ADDR]), // follower
+        slot_with_followers(2, MY_ADDR, 1, vec![THIRD_ADDR]), // leader
+        slot_with_followers(3, THIRD_ADDR, 1, vec![OTHER_ADDR]), // neither
         slot_with_followers(4, OTHER_ADDR, 1, vec![MY_ADDR, THIRD_ADDR]), // follower
     ];
     mgr.update_slot_table(build_slot_table(100, slots));

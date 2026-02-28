@@ -5,11 +5,7 @@ use tracing::debug;
 use crate::server::McpConfig;
 
 /// Get health status of all registry cluster components.
-pub async fn execute(
-    client: &Client,
-    config: &McpConfig,
-    _args: Value,
-) -> Result<String, String> {
+pub async fn execute(client: &Client, config: &McpConfig, _args: Value) -> Result<String, String> {
     let mut output = String::from("SOFARegistry Cluster Health\n\n");
 
     // Check meta server health

@@ -129,8 +129,16 @@ fn list_services_schema_has_data_center_property() {
 fn list_services_has_no_required_params() {
     let defs = tools::all_tool_definitions();
     let tool = defs.iter().find(|t| t.name == "list_services").unwrap();
-    let required = tool.input_schema.get("required").unwrap().as_array().unwrap();
-    assert!(required.is_empty(), "list_services should have no required params");
+    let required = tool
+        .input_schema
+        .get("required")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    assert!(
+        required.is_empty(),
+        "list_services should have no required params"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -141,7 +149,12 @@ fn list_services_has_no_required_params() {
 fn get_service_info_requires_data_id() {
     let defs = tools::all_tool_definitions();
     let tool = defs.iter().find(|t| t.name == "get_service_info").unwrap();
-    let required = tool.input_schema.get("required").unwrap().as_array().unwrap();
+    let required = tool
+        .input_schema
+        .get("required")
+        .unwrap()
+        .as_array()
+        .unwrap();
     assert!(
         required.iter().any(|v| v.as_str() == Some("data_id")),
         "get_service_info should require 'data_id'"
@@ -154,10 +167,7 @@ fn get_service_info_schema_has_data_id_property() {
     let tool = defs.iter().find(|t| t.name == "get_service_info").unwrap();
     let props = tool.input_schema.get("properties").unwrap();
     let data_id = props.get("data_id").unwrap();
-    assert_eq!(
-        data_id.get("type").and_then(|v| v.as_str()),
-        Some("string")
-    );
+    assert_eq!(data_id.get("type").and_then(|v| v.as_str()), Some("string"));
 }
 
 // ---------------------------------------------------------------------------
@@ -168,7 +178,12 @@ fn get_service_info_schema_has_data_id_property() {
 fn search_services_requires_pattern() {
     let defs = tools::all_tool_definitions();
     let tool = defs.iter().find(|t| t.name == "search_services").unwrap();
-    let required = tool.input_schema.get("required").unwrap().as_array().unwrap();
+    let required = tool
+        .input_schema
+        .get("required")
+        .unwrap()
+        .as_array()
+        .unwrap();
     assert!(
         required.iter().any(|v| v.as_str() == Some("pattern")),
         "search_services should require 'pattern'"
@@ -181,10 +196,7 @@ fn search_services_schema_has_pattern_property() {
     let tool = defs.iter().find(|t| t.name == "search_services").unwrap();
     let props = tool.input_schema.get("properties").unwrap();
     let pattern = props.get("pattern").unwrap();
-    assert_eq!(
-        pattern.get("type").and_then(|v| v.as_str()),
-        Some("string")
-    );
+    assert_eq!(pattern.get("type").and_then(|v| v.as_str()), Some("string"));
 }
 
 // ---------------------------------------------------------------------------
@@ -204,7 +216,10 @@ fn get_cluster_health_has_empty_properties() {
         .unwrap()
         .as_object()
         .unwrap();
-    assert!(props.is_empty(), "get_cluster_health should have no properties");
+    assert!(
+        props.is_empty(),
+        "get_cluster_health should have no properties"
+    );
 }
 
 #[test]
@@ -214,7 +229,12 @@ fn get_cluster_health_has_no_required_params() {
         .iter()
         .find(|t| t.name == "get_cluster_health")
         .unwrap();
-    let required = tool.input_schema.get("required").unwrap().as_array().unwrap();
+    let required = tool
+        .input_schema
+        .get("required")
+        .unwrap()
+        .as_array()
+        .unwrap();
     assert!(required.is_empty());
 }
 
@@ -239,7 +259,12 @@ fn get_slot_table_has_empty_properties() {
 fn get_slot_table_has_no_required_params() {
     let defs = tools::all_tool_definitions();
     let tool = defs.iter().find(|t| t.name == "get_slot_table").unwrap();
-    let required = tool.input_schema.get("required").unwrap().as_array().unwrap();
+    let required = tool
+        .input_schema
+        .get("required")
+        .unwrap()
+        .as_array()
+        .unwrap();
     assert!(required.is_empty());
 }
 

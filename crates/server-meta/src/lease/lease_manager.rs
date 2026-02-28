@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use std::time::{Duration, Instant};
 use dashmap::DashMap;
 use parking_lot::RwLock;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tracing::warn;
 
 /// Generic lease for a node (session or data server)
@@ -33,7 +33,9 @@ impl<T: Clone> Lease<T> {
     }
 
     pub fn remaining(&self) -> Duration {
-        self.duration.checked_sub(self.last_renewed.elapsed()).unwrap_or(Duration::ZERO)
+        self.duration
+            .checked_sub(self.last_renewed.elapsed())
+            .unwrap_or(Duration::ZERO)
     }
 }
 
@@ -64,11 +66,11 @@ impl<T: Clone + Send + Sync + 'static> LeaseManager<T> {
         let lease = Lease::new(node.clone(), self.default_duration);
         let is_new = !self.leases.contains_key(&key);
         self.leases.insert(key, lease);
-        
+
         for obs in self.observers.read().iter() {
             obs.on_registered(&node);
         }
-        
+
         is_new
     }
 
@@ -89,11 +91,17 @@ impl<T: Clone + Send + Sync + 'static> LeaseManager<T> {
     }
 
     pub fn get_all(&self) -> Vec<T> {
-        self.leases.iter().map(|entry| entry.value().node.clone()).collect()
+        self.leases
+            .iter()
+            .map(|entry| entry.value().node.clone())
+            .collect()
     }
 
     pub fn get_all_keys(&self) -> Vec<String> {
-        self.leases.iter().map(|entry| entry.key().clone()).collect()
+        self.leases
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect()
     }
 
     pub fn count(&self) -> usize {
@@ -106,7 +114,9 @@ impl<T: Clone + Send + Sync + 'static> LeaseManager<T> {
 
     /// Evict all expired leases, returning the evicted nodes
     pub fn evict_expired(&self) -> Vec<T> {
-        let expired_keys: Vec<String> = self.leases.iter()
+        let expired_keys: Vec<String> = self
+            .leases
+            .iter()
             .filter(|entry| entry.value().is_expired())
             .map(|entry| entry.key().clone())
             .collect();
@@ -141,15 +151,15 @@ mod tests {
     #[test]
     fn test_lease_lifecycle() {
         let manager: LeaseManager<String> = LeaseManager::new(1); // 1 second lease
-        
+
         // Register
         assert!(manager.register("node1".into(), "node1-data".into()));
         assert_eq!(manager.count(), 1);
-        
+
         // Renew
         assert!(manager.renew("node1"));
         assert!(!manager.renew("nonexistent"));
-        
+
         // Get
         assert_eq!(manager.get("node1"), Some("node1-data".into()));
         assert_eq!(manager.get("nonexistent"), None);
@@ -159,9 +169,9 @@ mod tests {
     fn test_lease_expiry() {
         let manager: LeaseManager<String> = LeaseManager::new(0); // 0 second lease (expires immediately)
         manager.register("node1".into(), "data".into());
-        
+
         thread::sleep(Duration::from_millis(10));
-        
+
         let evicted = manager.evict_expired();
         assert_eq!(evicted.len(), 1);
         assert_eq!(manager.count(), 0);

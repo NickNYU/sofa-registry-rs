@@ -19,7 +19,11 @@ mod tests {
 
     #[test]
     fn test_data_info_id_roundtrip() {
-        let id = to_data_info_id("com.example.Service", "DEFAULT_INSTANCE_ID", "DEFAULT_GROUP");
+        let id = to_data_info_id(
+            "com.example.Service",
+            "DEFAULT_INSTANCE_ID",
+            "DEFAULT_GROUP",
+        );
         assert_eq!(id, "com.example.Service#DEFAULT_INSTANCE_ID#DEFAULT_GROUP");
         let (data_id, instance_id, group) = parse_data_info_id(&id).unwrap();
         assert_eq!(data_id, "com.example.Service");

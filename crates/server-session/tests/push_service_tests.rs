@@ -168,10 +168,10 @@ async fn concurrent_pushes_do_not_panic() {
     let handles = vec![];
     for i in 0..10 {
         let svc = PushService::new(1, Arc::new(StreamRegistry::new())); // We cannot clone PushService, so we
-                                        // re-use the original.
-        // Actually PushService does not implement Clone. Let's just push
-        // sequentially from different tasks using a shared reference approach.
-        // Since push takes &self, we can wrap in Arc.
+                                                                        // re-use the original.
+                                                                        // Actually PushService does not implement Clone. Let's just push
+                                                                        // sequentially from different tasks using a shared reference approach.
+                                                                        // Since push takes &self, we can wrap in Arc.
         let _ = svc;
         let _ = i;
     }

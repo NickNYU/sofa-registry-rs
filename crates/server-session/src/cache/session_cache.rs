@@ -22,8 +22,7 @@ impl SessionCacheService {
 
     /// Update the cached version for a data_info_id.
     pub fn update_version(&self, data_info_id: &str, version: DatumVersion) {
-        self.versions
-            .insert(data_info_id.to_string(), version);
+        self.versions.insert(data_info_id.to_string(), version);
     }
 
     /// Returns `true` if the remote version is newer than what we have cached,

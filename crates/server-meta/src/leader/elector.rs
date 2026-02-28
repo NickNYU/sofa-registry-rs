@@ -1,16 +1,16 @@
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use parking_lot::RwLock;
-use tokio::time::{Duration, interval};
-use tokio_util::sync::CancellationToken;
-use tracing::{info, warn, error, debug};
-use sofa_registry_core::error::Result;
 use sofa_registry_core::constants::defaults;
+use sofa_registry_core::error::Result;
 use sofa_registry_server_shared::metrics as srv_metrics;
 use sofa_registry_store::traits::{
-    leader_elector::{LeaderInfo, ElectorRole, LeaderAware, LeaderElector},
     distribute_lock::DistributeLockRepository,
+    leader_elector::{ElectorRole, LeaderAware, LeaderElector, LeaderInfo},
 };
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use tokio::time::{interval, Duration};
+use tokio_util::sync::CancellationToken;
+use tracing::{debug, error, info, warn};
 
 /// JDBC-backed leader elector for Meta server.
 /// Translated from Java's MetaJdbcLeaderElector / AbstractLeaderElector.
@@ -27,7 +27,7 @@ pub struct MetaLeaderElector {
     data_center: String,
     lock_duration_ms: i64,
     election_interval_ms: u64,
-    
+
     leader_info: RwLock<LeaderInfo>,
     role: RwLock<ElectorRole>,
     awares: RwLock<Vec<Arc<dyn LeaderAware>>>,
@@ -57,9 +57,12 @@ impl MetaLeaderElector {
 
     /// Main election loop - runs until cancelled.
     pub async fn run_election_loop(&self, cancel: CancellationToken) {
-        info!("Starting election loop for {} (interval={}ms)", self.my_address, self.election_interval_ms);
+        info!(
+            "Starting election loop for {} (interval={}ms)",
+            self.my_address, self.election_interval_ms
+        );
         let mut ticker = interval(Duration::from_millis(self.election_interval_ms));
-        
+
         loop {
             tokio::select! {
                 _ = cancel.cancelled() => {
@@ -96,13 +99,17 @@ impl MetaLeaderElector {
 
     async fn do_compete(&self) -> Result<()> {
         debug!("Competing for leadership: {}", self.my_address);
-        
-        match self.lock_repo.compete_lock(
-            defaults::META_LEADER_LOCK_NAME,
-            &self.data_center,
-            &self.my_address,
-            self.lock_duration_ms,
-        ).await {
+
+        match self
+            .lock_repo
+            .compete_lock(
+                defaults::META_LEADER_LOCK_NAME,
+                &self.data_center,
+                &self.my_address,
+                self.lock_duration_ms,
+            )
+            .await
+        {
             Ok(Some(lock)) => {
                 let is_me = lock.owner == self.my_address;
                 let leader_info = LeaderInfo {
@@ -110,11 +117,14 @@ impl MetaLeaderElector {
                     leader: Some(lock.owner.clone()),
                     expire_timestamp: lock.expire_timestamp(),
                 };
-                
+
                 self.update_leader_info(leader_info, is_me);
-                
+
                 if is_me {
-                    info!("I am now the leader: {} (term={})", self.my_address, lock.term);
+                    info!(
+                        "I am now the leader: {} (term={})",
+                        self.my_address, lock.term
+                    );
                 } else {
                     debug!("Leader is: {} (term={})", lock.owner, lock.term);
                 }
@@ -126,17 +136,21 @@ impl MetaLeaderElector {
                 warn!("Failed to compete for leadership: {}", e);
             }
         }
-        
+
         Ok(())
     }
 
     async fn do_leader_heartbeat(&self) -> Result<()> {
-        match self.lock_repo.owner_heartbeat(
-            defaults::META_LEADER_LOCK_NAME,
-            &self.data_center,
-            &self.my_address,
-            self.lock_duration_ms,
-        ).await {
+        match self
+            .lock_repo
+            .owner_heartbeat(
+                defaults::META_LEADER_LOCK_NAME,
+                &self.data_center,
+                &self.my_address,
+                self.lock_duration_ms,
+            )
+            .await
+        {
             Ok(true) => {
                 debug!("Leader heartbeat successful");
             }
@@ -153,10 +167,11 @@ impl MetaLeaderElector {
     }
 
     async fn do_query(&self) -> Result<()> {
-        match self.lock_repo.query_lock(
-            defaults::META_LEADER_LOCK_NAME,
-            &self.data_center,
-        ).await {
+        match self
+            .lock_repo
+            .query_lock(defaults::META_LEADER_LOCK_NAME, &self.data_center)
+            .await
+        {
             Ok(Some(lock)) if !lock.is_expired() => {
                 let expire_timestamp = lock.expire_timestamp();
                 let leader_info = LeaderInfo {
@@ -175,9 +190,9 @@ impl MetaLeaderElector {
 
     fn update_leader_info(&self, info: LeaderInfo, is_me: bool) {
         let was_leader = self.was_leader.load(Ordering::Relaxed);
-        
+
         *self.leader_info.write() = info;
-        
+
         if is_me && !was_leader {
             // Became leader
             *self.role.write() = ElectorRole::Leader;

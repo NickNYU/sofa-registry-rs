@@ -49,7 +49,11 @@ impl SessionServerManager {
     }
 
     pub fn get_session_server_addresses(&self) -> Vec<String> {
-        self.lease_manager.get_all().iter().map(|n| n.address.clone()).collect()
+        self.lease_manager
+            .get_all()
+            .iter()
+            .map(|n| n.address.clone())
+            .collect()
     }
 
     pub fn count(&self) -> usize {

@@ -16,11 +16,7 @@ impl SqliteInterfaceAppsRepo {
 
 #[async_trait]
 impl InterfaceAppsRepository for SqliteInterfaceAppsRepo {
-    async fn get_app_names(
-        &self,
-        data_center: &str,
-        interface_name: &str,
-    ) -> Result<Vec<String>> {
+    async fn get_app_names(&self, data_center: &str, interface_name: &str) -> Result<Vec<String>> {
         let rows: Vec<(String,)> = sqlx::query_as(
             "SELECT app_name FROM interface_apps_index \
              WHERE data_center = ? AND interface_name = ?",

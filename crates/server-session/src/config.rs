@@ -34,10 +34,7 @@ impl Default for SessionServerConfig {
             local_address: "127.0.0.1".to_string(),
             grpc_port: defaults::SESSION_GRPC_PORT,
             http_port: defaults::SESSION_HTTP_PORT,
-            meta_server_addresses: vec![format!(
-                "127.0.0.1:{}",
-                defaults::META_GRPC_PORT
-            )],
+            meta_server_addresses: vec![format!("127.0.0.1:{}", defaults::META_GRPC_PORT)],
             push_task_timeout_ms: defaults::PUSH_TASK_TIMEOUT_MS,
             push_task_buffer_size: 4096,
             slot_num: 256,

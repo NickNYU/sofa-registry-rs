@@ -1,5 +1,7 @@
 use serde_json::Value;
-use sofa_registry_mcp::server::{JsonRpcError, JsonRpcRequest, JsonRpcResponse, McpConfig, ToolDefinition};
+use sofa_registry_mcp::server::{
+    JsonRpcError, JsonRpcRequest, JsonRpcResponse, McpConfig, ToolDefinition,
+};
 use sofa_registry_mcp::McpServer;
 
 // ---------------------------------------------------------------------------
@@ -434,10 +436,7 @@ async fn handle_list_tools_returns_expected_tool_names() {
     let resp = server.handle_request(req).await;
     let result = resp.result.unwrap();
     let tools = result["tools"].as_array().unwrap();
-    let names: Vec<&str> = tools
-        .iter()
-        .map(|t| t["name"].as_str().unwrap())
-        .collect();
+    let names: Vec<&str> = tools.iter().map(|t| t["name"].as_str().unwrap()).collect();
     assert!(names.contains(&"list_services"));
     assert!(names.contains(&"get_service_info"));
     assert!(names.contains(&"search_services"));

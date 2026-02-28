@@ -62,13 +62,12 @@ impl MetaClient {
         }
     }
 
-    async fn try_register(
-        &self,
-        addr: &str,
-    ) -> Result<Option<SlotTable>, MetaError> {
-        let channel = self.pool.get_channel(addr).await.map_err(|e| {
-            MetaError::Connection(format!("{}: {}", addr, e))
-        })?;
+    async fn try_register(&self, addr: &str) -> Result<Option<SlotTable>, MetaError> {
+        let channel = self
+            .pool
+            .get_channel(addr)
+            .await
+            .map_err(|e| MetaError::Connection(format!("{}: {}", addr, e)))?;
         let mut client = MetaServiceClient::new(channel);
 
         let resp = client
@@ -97,14 +96,12 @@ impl MetaClient {
         }
     }
 
-    async fn try_renew(
-        &self,
-        addr: &str,
-        duration_secs: u64,
-    ) -> Result<i64, MetaError> {
-        let channel = self.pool.get_channel(addr).await.map_err(|e| {
-            MetaError::Connection(format!("{}: {}", addr, e))
-        })?;
+    async fn try_renew(&self, addr: &str, duration_secs: u64) -> Result<i64, MetaError> {
+        let channel = self
+            .pool
+            .get_channel(addr)
+            .await
+            .map_err(|e| MetaError::Connection(format!("{}: {}", addr, e)))?;
         let mut client = MetaServiceClient::new(channel);
 
         let resp = client
@@ -130,9 +127,11 @@ impl MetaClient {
         addr: &str,
         current_epoch: i64,
     ) -> Result<Option<SlotTable>, MetaError> {
-        let channel = self.pool.get_channel(addr).await.map_err(|e| {
-            MetaError::Connection(format!("{}: {}", addr, e))
-        })?;
+        let channel = self
+            .pool
+            .get_channel(addr)
+            .await
+            .map_err(|e| MetaError::Connection(format!("{}: {}", addr, e)))?;
         let mut client = MetaServiceClient::new(channel);
 
         let resp = client
@@ -172,8 +171,7 @@ impl MetaClient {
         duration_secs: u64,
         cancel: CancellationToken,
     ) {
-        let mut ticker =
-            tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
+        let mut ticker = tokio::time::interval(tokio::time::Duration::from_secs(interval_secs));
         loop {
             tokio::select! {
                 biased;
@@ -217,10 +215,7 @@ impl sofa_registry_store::traits::MetaServiceClient for MetaClient {
         Err(MetaError::AllAddressesFailed("renew_node".to_string()))
     }
 
-    async fn get_slot_table(
-        &self,
-        current_epoch: i64,
-    ) -> Result<Option<SlotTable>, MetaError> {
+    async fn get_slot_table(&self, current_epoch: i64) -> Result<Option<SlotTable>, MetaError> {
         for addr in &self.meta_addresses {
             match self.try_get_slot_table(addr, current_epoch).await {
                 Ok(result) => return Ok(result),

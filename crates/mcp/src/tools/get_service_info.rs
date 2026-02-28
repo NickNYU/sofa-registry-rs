@@ -5,11 +5,7 @@ use tracing::debug;
 use crate::server::McpConfig;
 
 /// Get detailed information about a specific service by data ID.
-pub async fn execute(
-    client: &Client,
-    config: &McpConfig,
-    args: Value,
-) -> Result<String, String> {
+pub async fn execute(client: &Client, config: &McpConfig, args: Value) -> Result<String, String> {
     let data_id = args
         .get("data_id")
         .and_then(|v| v.as_str())
@@ -44,9 +40,7 @@ pub async fn execute(
             if status.is_success() {
                 match serde_json::from_str::<Value>(&body) {
                     Ok(json) => {
-                        output.push_str(
-                            &serde_json::to_string_pretty(&json).unwrap_or(body),
-                        );
+                        output.push_str(&serde_json::to_string_pretty(&json).unwrap_or(body));
                     }
                     Err(_) => output.push_str(&body),
                 }
@@ -55,10 +49,7 @@ pub async fn execute(
             }
         }
         Err(e) => {
-            output.push_str(&format!(
-                "Could not reach data server: {}\n",
-                e
-            ));
+            output.push_str(&format!("Could not reach data server: {}\n", e));
         }
     }
 
@@ -70,9 +61,7 @@ pub async fn execute(
             if status.is_success() {
                 match serde_json::from_str::<Value>(&body) {
                     Ok(json) => {
-                        output.push_str(
-                            &serde_json::to_string_pretty(&json).unwrap_or(body),
-                        );
+                        output.push_str(&serde_json::to_string_pretty(&json).unwrap_or(body));
                     }
                     Err(_) => output.push_str(&body),
                 }
@@ -81,10 +70,7 @@ pub async fn execute(
             }
         }
         Err(e) => {
-            output.push_str(&format!(
-                "Could not reach session server: {}\n",
-                e
-            ));
+            output.push_str(&format!("Could not reach session server: {}\n", e));
         }
     }
 

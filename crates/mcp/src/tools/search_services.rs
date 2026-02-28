@@ -5,11 +5,7 @@ use tracing::debug;
 use crate::server::McpConfig;
 
 /// Search for services by name pattern (substring match).
-pub async fn execute(
-    client: &Client,
-    config: &McpConfig,
-    args: Value,
-) -> Result<String, String> {
+pub async fn execute(client: &Client, config: &McpConfig, args: Value) -> Result<String, String> {
     let pattern = args
         .get("pattern")
         .and_then(|v| v.as_str())

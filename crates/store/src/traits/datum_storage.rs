@@ -24,11 +24,7 @@ pub trait DatumStorage: Send + Sync {
         session_process_id: &ProcessId,
     ) -> HashMap<String, DatumVersion>;
 
-    fn get_publishers(
-        &self,
-        data_center: &str,
-        data_info_id: &str,
-    ) -> HashMap<String, Publisher>;
+    fn get_publishers(&self, data_center: &str, data_info_id: &str) -> HashMap<String, Publisher>;
 
     fn get_all_data_info_ids(&self, data_center: &str) -> Vec<String>;
 
