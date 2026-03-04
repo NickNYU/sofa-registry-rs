@@ -243,11 +243,14 @@ impl DataService for DataGrpcService {
 
         self.check_slot_leader(slot_id)?;
 
-        // Renew session lease if we have session info from publishers
+        // Renew session lease if we have session info from publishers.
+        // The session_process_id is in ProcessId format "host:port-timestamp-seq";
+        // extract the host_address (host:port) for use as a network address.
         for pub_pb in &req.publishers {
             if !pub_pb.session_process_id.is_empty() {
+                let session_pid = parse_process_id(&pub_pb.session_process_id);
                 self.session_lease_manager
-                    .renew(&pub_pb.session_process_id, &pub_pb.session_process_id);
+                    .renew(&session_pid.host_address, &pub_pb.session_process_id);
             }
         }
 
@@ -329,8 +332,9 @@ impl DataService for DataGrpcService {
 
         // Renew session lease
         if !req.session_process_id.is_empty() {
+            let session_pid = parse_process_id(&req.session_process_id);
             self.session_lease_manager
-                .renew(&req.session_process_id, &req.session_process_id);
+                .renew(&session_pid.host_address, &req.session_process_id);
         }
 
         // Put publishers

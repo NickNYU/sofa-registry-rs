@@ -364,7 +364,7 @@ async fn run_meta(
         pool,
     ));
 
-    let server = sofa_registry_server_meta::server::MetaServer::new(config, lock_repo).await;
+    let mut server = sofa_registry_server_meta::server::MetaServer::new(config, lock_repo).await;
     server.start().await.map_err(|e| anyhow::anyhow!("{}", e))?;
 
     tokio::signal::ctrl_c().await?;
@@ -424,7 +424,7 @@ async fn run_all(app_config: AppConfig) -> anyhow::Result<()> {
         pool,
     ));
 
-    let meta_server =
+    let mut meta_server =
         sofa_registry_server_meta::server::MetaServer::new(meta_config, lock_repo).await;
     meta_server
         .start()

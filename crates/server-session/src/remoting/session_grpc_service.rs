@@ -31,6 +31,162 @@ impl SessionGrpcServiceImpl {
     pub fn new(state: Arc<SessionServerState>) -> Self {
         Self { state }
     }
+
+    /// Fetch actual publisher data from the Data server for a given data_info_id.
+    async fn fetch_data_from_data_server(
+        &self,
+        data_server_address: &str,
+        data_info_id: &str,
+        data_center: &str,
+    ) -> std::collections::HashMap<String, Vec<sofa_registry_core::model::DataBox>> {
+        use sofa_registry_core::pb::sofa::registry::data::{
+            data_service_client::DataServiceClient, GetDataRequest,
+        };
+
+        let slot_id = self.state.slot_manager.slot_of(data_info_id);
+        let channel = match self.state.data_client_pool.get_channel(data_server_address).await {
+            Ok(ch) => ch,
+            Err(e) => {
+                warn!("Failed to connect to data server {} for fetch: {}", data_server_address, e);
+                return std::collections::HashMap::new();
+            }
+        };
+
+        let mut client = DataServiceClient::new(channel);
+        let request = GetDataRequest {
+            data_center: data_center.to_string(),
+            data_info_id: data_info_id.to_string(),
+            slot_id,
+            slot_table_epoch: self.state.slot_manager.get_epoch(),
+            slot_leader_epoch: 0,
+        };
+
+        match client.get_data(request).await {
+            Ok(resp) => {
+                let inner = resp.into_inner();
+                if !inner.success || inner.datum.is_none() {
+                    return std::collections::HashMap::new();
+                }
+                let datum = inner.datum.unwrap();
+                // Convert publishers' data_list into DataBox format.
+                // Key is the data_center (zone), value is the list of data boxes.
+                let mut data_map: std::collections::HashMap<String, Vec<sofa_registry_core::model::DataBox>> = std::collections::HashMap::new();
+                let zone = datum.data_center.clone();
+                let mut boxes = Vec::new();
+                for pub_pb in &datum.publishers {
+                    for data_bytes in &pub_pb.data_list {
+                        let data_str = String::from_utf8_lossy(data_bytes).to_string();
+                        boxes.push(sofa_registry_core::model::DataBox::new(data_str));
+                    }
+                }
+                if !boxes.is_empty() {
+                    data_map.insert(zone, boxes);
+                }
+                data_map
+            }
+            Err(e) => {
+                warn!("Failed to fetch data from data server {}: {}", data_server_address, e);
+                std::collections::HashMap::new()
+            }
+        }
+    }
+
+    /// Push initial data to a newly registered subscriber by fetching from the Data server.
+    async fn push_initial_data(
+        state: &SessionServerState,
+        data_info_id: &str,
+        data_server_addr: &str,
+        data_center: &str,
+        client_id: &str,
+    ) {
+        use sofa_registry_core::pb::sofa::registry::data::{
+            data_service_client::DataServiceClient, GetDataRequest,
+        };
+
+        let slot_id = state.slot_manager.slot_of(data_info_id);
+        let channel = match state.data_client_pool.get_channel(data_server_addr).await {
+            Ok(ch) => ch,
+            Err(e) => {
+                debug!("Initial push: failed to connect to data server {}: {}", data_server_addr, e);
+                return;
+            }
+        };
+
+        let mut client = DataServiceClient::new(channel);
+        let request = GetDataRequest {
+            data_center: data_center.to_string(),
+            data_info_id: data_info_id.to_string(),
+            slot_id,
+            slot_table_epoch: state.slot_manager.get_epoch(),
+            slot_leader_epoch: 0,
+        };
+
+        let resp = match client.get_data(request).await {
+            Ok(resp) => resp.into_inner(),
+            Err(e) => {
+                debug!("Initial push: failed to fetch data for {}: {}", data_info_id, e);
+                return;
+            }
+        };
+
+        if !resp.success || resp.datum.is_none() {
+            return;
+        }
+
+        let datum = resp.datum.unwrap();
+        if datum.publishers.is_empty() {
+            return;
+        }
+
+        // Build the data map from all publishers
+        let mut boxes = Vec::new();
+        for pub_pb in &datum.publishers {
+            for data_bytes in &pub_pb.data_list {
+                let data_str = String::from_utf8_lossy(data_bytes).to_string();
+                boxes.push(sofa_registry_core::model::DataBox::new(data_str));
+            }
+        }
+
+        if boxes.is_empty() {
+            return;
+        }
+
+        let zone = datum.data_center.clone();
+        let mut data_map = std::collections::HashMap::new();
+        data_map.insert(zone, boxes);
+
+        // Parse data_info_id into components
+        let parts: Vec<&str> = data_info_id.splitn(3, '#').collect();
+        let (data_id, instance_id, group) = match parts.len() {
+            3 => (parts[0].to_string(), parts[1].to_string(), parts[2].to_string()),
+            2 => (parts[0].to_string(), parts[1].to_string(), String::new()),
+            _ => (data_info_id.to_string(), String::new(), String::new()),
+        };
+
+        let received_data = sofa_registry_core::model::ReceivedData {
+            data_id,
+            group,
+            instance_id,
+            segment: None,
+            scope: None,
+            subscriber_regist_ids: vec![client_id.to_string()],
+            data: data_map,
+            version: Some(datum.version),
+            local_zone: None,
+            data_count: std::collections::HashMap::new(),
+        };
+
+        state
+            .push_service
+            .push(crate::push::PushTask {
+                data_info_id: data_info_id.to_string(),
+                subscriber_regist_ids: vec![client_id.to_string()],
+                data: received_data,
+            })
+            .await;
+
+        debug!("Initial push sent for {} to client {}", data_info_id, client_id);
+    }
 }
 
 /// Convert a `PublisherRegisterPb` to a domain `Publisher`.
@@ -102,7 +258,11 @@ fn pb_to_publisher(pb: &PublisherRegisterPb, server_address: &str) -> Publisher 
         version: RegisterVersion::new(version, timestamp),
         source_address,
         session_process_id: ProcessId::new(server_address, 0, 0),
-        data_list: Vec::new(),
+        data_list: pb.data_list.iter().map(|db| {
+            sofa_registry_core::model::ServerDataBox::new(
+                bytes::Bytes::from(db.data.clone())
+            )
+        }).collect(),
         publish_type: PublishType::Normal,
         publish_source: PublishSource::Client,
         attributes,
@@ -184,7 +344,7 @@ impl SessionService for SessionGrpcServiceImpl {
         request: Request<PublisherRegisterPb>,
     ) -> Result<Response<RegisterResponsePb>, Status> {
         let pb = request.into_inner();
-        let publisher = pb_to_publisher(&pb, &self.state.config.local_address);
+        let publisher = pb_to_publisher(&pb, &self.state.config.grpc_address());
         let regist_id = publisher.regist_id.clone();
         let data_info_id = publisher.data_info_id.clone();
         let client_id = publisher.client_id.clone();
@@ -230,7 +390,7 @@ impl SessionService for SessionGrpcServiceImpl {
         request: Request<SubscriberRegisterPb>,
     ) -> Result<Response<RegisterResponsePb>, Status> {
         let pb = request.into_inner();
-        let subscriber = pb_to_subscriber(&pb, &self.state.config.local_address);
+        let subscriber = pb_to_subscriber(&pb, &self.state.config.grpc_address());
         let regist_id = subscriber.regist_id.clone();
         let data_info_id = subscriber.data_info_id.clone();
         let client_id = subscriber.client_id.clone();
@@ -254,12 +414,28 @@ impl SessionService for SessionGrpcServiceImpl {
         metrics::gauge!(srv_metrics::SESSION_ACTIVE_SUBSCRIBERS)
             .set(self.state.subscriber_registry.count() as f64);
 
-        // Check if we have cached data to push immediately
-        if let Some(version) = self.state.cache_service.get_version(&data_info_id) {
-            debug!(
-                "Subscriber {} has cached version {} for {}",
-                regist_id, version.value, data_info_id
-            );
+        // Trigger initial data push: fetch data from Data server and push to subscriber.
+        // This runs asynchronously so we don't block the registration response.
+        if let Some((slot_id, data_server_addr)) =
+            self.state.slot_manager.get_leader_for_data(&data_info_id)
+        {
+            let state = self.state.clone();
+            let data_info_id_clone = data_info_id.clone();
+            let client_id_clone = client_id.clone();
+            let data_center = self.state.config.data_center.clone();
+            let _ = slot_id; // used implicitly via get_leader_for_data
+            tokio::spawn(async move {
+                // Small delay to allow the subscribe stream to be established
+                tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                Self::push_initial_data(
+                    &state,
+                    &data_info_id_clone,
+                    &data_server_addr,
+                    &data_center,
+                    &client_id_clone,
+                )
+                .await;
+            });
         }
 
         Ok(Response::new(RegisterResponsePb {
@@ -349,12 +525,60 @@ impl SessionService for SessionGrpcServiceImpl {
         let (tx, rx) = mpsc::channel::<Result<ReceivedDataPb, Status>>(64);
 
         // Register this client's stream so PushReceiver can send data to it.
-        self.state.stream_registry.register(&req.client_id, tx);
+        self.state.stream_registry.register(&req.client_id, tx.clone());
 
         // Metrics
         metrics::counter!(srv_metrics::GRPC_REQUESTS_TOTAL, "method" => "subscribe").increment(1);
         metrics::gauge!(srv_metrics::SESSION_ACTIVE_STREAMS)
             .set(self.state.stream_registry.count() as f64);
+
+        // Spawn a disconnect-detection task as a safety net. When the
+        // client's gRPC connection eventually closes, the Receiver (held by
+        // tonic's response stream) is dropped, causing tx.closed() to
+        // resolve. We then clean up any remaining publishers that were not
+        // explicitly unregistered by the client.
+        let state = self.state.clone();
+        let client_id = req.client_id.clone();
+        tokio::spawn(async move {
+            tx.closed().await;
+            info!("Client stream closed: client_id={}, cleaning up", client_id);
+
+            // Look up the connect_id from the connection service.
+            let connect_id = state
+                .connection_service
+                .get(&client_id)
+                .map(|info| info.address.clone());
+
+            if let Some(ref connect_id) = connect_id {
+                // Remove all publishers for this connection and forward
+                // Unpublish requests to the data server for each.
+                let removed_publishers =
+                    state.publisher_registry.remove_by_connect_id(connect_id);
+                for publisher in &removed_publishers {
+                    state
+                        .write_acceptor
+                        .accept(WriteRequest::Unpublish {
+                            data_info_id: publisher.data_info_id.clone(),
+                            regist_id: publisher.regist_id.clone(),
+                        })
+                        .await;
+                }
+                if !removed_publishers.is_empty() {
+                    info!(
+                        "Cleaned up {} publishers for disconnected client {}",
+                        removed_publishers.len(),
+                        client_id
+                    );
+                }
+
+                // Remove subscribers for this connection.
+                state.subscriber_registry.remove_by_connect_id(connect_id);
+            }
+
+            // Clean up stream and connection registrations.
+            state.stream_registry.unregister(&client_id);
+            state.connection_service.disconnect(&client_id);
+        });
 
         let stream = ReceiverStream::new(rx);
         Ok(Response::new(Box::pin(stream)))
@@ -432,17 +656,29 @@ impl SessionService for SessionGrpcServiceImpl {
 
         let subscriber_ids: Vec<String> = subscribers.iter().map(|s| s.client_id.clone()).collect();
 
-        // Create a push task with placeholder data.
-        // In a full implementation, we would fetch the actual data from the data server.
-        // For now, we create a minimal ReceivedData with version info.
+        // Parse data_info_id format: "data_id#instance_id#group"
+        let parts: Vec<&str> = req.data_info_id.splitn(3, '#').collect();
+        let (data_id, instance_id, group) = match parts.len() {
+            3 => (parts[0].to_string(), parts[1].to_string(), parts[2].to_string()),
+            2 => (parts[0].to_string(), parts[1].to_string(), String::new()),
+            _ => (req.data_info_id.clone(), String::new(), String::new()),
+        };
+
+        // Fetch actual data from the Data server
+        let data_map = self.fetch_data_from_data_server(
+            &req.data_server_address,
+            &req.data_info_id,
+            &req.data_center,
+        ).await;
+
         let received_data = sofa_registry_core::model::ReceivedData {
-            data_id: req.data_info_id.clone(),
-            group: String::new(),
-            instance_id: String::new(),
+            data_id,
+            group,
+            instance_id,
             segment: None,
             scope: None,
             subscriber_regist_ids: subscriber_ids.clone(),
-            data: std::collections::HashMap::new(),
+            data: data_map,
             version: Some(req.version),
             local_zone: None,
             data_count: std::collections::HashMap::new(),

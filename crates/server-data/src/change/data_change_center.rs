@@ -151,6 +151,8 @@ impl DataChangeReceiver {
             return;
         }
 
+        debug!("Notifying {} session servers of {} changes", sessions.len(), merged.len());
+
         for session_addr in &sessions {
             let channel = match self.pool.get_channel(session_addr).await {
                 Ok(ch) => ch,

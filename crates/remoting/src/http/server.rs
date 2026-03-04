@@ -1,12 +1,14 @@
 use axum::Router;
 use std::net::SocketAddr;
 use tokio::sync::watch;
+use tokio::task::JoinHandle;
 use tracing::info;
 
 /// HTTP server wrapper around axum with lifecycle management.
 pub struct AxumHttpServer {
     addr: SocketAddr,
     shutdown_tx: Option<watch::Sender<bool>>,
+    handle: Option<JoinHandle<()>>,
 }
 
 impl AxumHttpServer {
@@ -15,6 +17,7 @@ impl AxumHttpServer {
         Self {
             addr,
             shutdown_tx: None,
+            handle: None,
         }
     }
 
@@ -22,7 +25,7 @@ impl AxumHttpServer {
     pub async fn start(
         &mut self,
         router: Router,
-    ) -> Result<tokio::task::JoinHandle<()>, Box<dyn std::error::Error>> {
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let addr = self.addr;
         let (tx, mut rx) = watch::channel(false);
         self.shutdown_tx = Some(tx);
@@ -41,12 +44,21 @@ impl AxumHttpServer {
             }
         });
 
-        Ok(handle)
+        self.handle = Some(handle);
+        Ok(())
     }
 
     pub fn stop(&self) {
         if let Some(tx) = &self.shutdown_tx {
             let _ = tx.send(true);
+        }
+    }
+
+    /// Stop and wait for the server task to finish, ensuring the port is released.
+    pub async fn stop_and_wait(&mut self) {
+        self.stop();
+        if let Some(h) = self.handle.take() {
+            let _ = h.await;
         }
     }
 

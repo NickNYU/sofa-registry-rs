@@ -25,6 +25,7 @@ dashmap.workspace = true
 parking_lot.workspace = true
 chrono.workspace = true
 metrics.workspace = true
+bytes.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["full"] }

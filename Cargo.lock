@@ -2574,7 +2574,10 @@ dependencies = [
 name = "sofa-registry-integration-tests"
 version = "0.1.0"
 dependencies = [
+ "chrono",
+ "parking_lot",
  "reqwest",
+ "serde",
  "serde_json",
  "sofa-registry-client",
  "sofa-registry-core",
@@ -2620,6 +2623,7 @@ dependencies = [
  "sofa-registry-core",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-stream",
  "tonic",
  "tower 0.5.3",
  "tower-http",
@@ -2674,6 +2678,7 @@ dependencies = [
  "sqlx",
  "thiserror 2.0.18",
  "tokio",
+ "tokio-stream",
  "tokio-util",
  "tonic",
  "tower-http",
@@ -2686,6 +2691,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "bytes",
  "chrono",
  "dashmap",
  "metrics",

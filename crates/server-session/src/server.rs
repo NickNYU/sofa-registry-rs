@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use tokio::task::AbortHandle;
+use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Server as TonicServer;
 use tracing::{error, info};
@@ -30,6 +32,7 @@ pub struct SessionServerState {
     pub write_acceptor: WriteDataAcceptor,
     pub stream_registry: Arc<StreamRegistry>,
     pub slot_manager: Arc<SessionSlotManager>,
+    pub data_client_pool: Arc<GrpcClientPool>,
 }
 
 /// The Session Server:
@@ -44,6 +47,7 @@ pub struct SessionServer {
     cancel: CancellationToken,
     push_receiver: Option<PushReceiver>,
     write_receiver: Option<WriteDataReceiver>,
+    server_abort_handles: Vec<AbortHandle>,
 }
 
 impl SessionServer {
@@ -54,6 +58,7 @@ impl SessionServer {
 
         let slot_manager = Arc::new(SessionSlotManager::new(config.slot_num));
         let grpc_pool = Arc::new(GrpcClientPool::new());
+        let data_client_pool = Arc::new(GrpcClientPool::new());
         let (write_acceptor, write_receiver) = WriteDataAcceptor::new(
             4096,
             grpc_pool,
@@ -72,6 +77,7 @@ impl SessionServer {
             write_acceptor,
             stream_registry,
             slot_manager,
+            data_client_pool,
         });
 
         Self {
@@ -80,6 +86,7 @@ impl SessionServer {
             cancel: CancellationToken::new(),
             push_receiver: Some(push_receiver),
             write_receiver: Some(write_receiver),
+            server_abort_handles: Vec::new(),
         }
     }
 
@@ -87,21 +94,25 @@ impl SessionServer {
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting Session server...");
 
-        // Start gRPC server
-        let grpc_addr = format!("0.0.0.0:{}", self.config.grpc_port).parse()?;
+        // Start gRPC server -- pre-bind the listener so the port is released
+        // promptly when the server is stopped (important for restart).
+        let grpc_addr = format!("0.0.0.0:{}", self.config.grpc_port);
+        let grpc_listener = tokio::net::TcpListener::bind(&grpc_addr).await?;
+        let grpc_incoming = TcpListenerStream::new(grpc_listener);
         let grpc_service = SessionGrpcServiceImpl::new(self.state.clone());
         let cancel = self.cancel.clone();
 
-        tokio::spawn(async move {
+        let grpc_handle = tokio::spawn(async move {
             info!("Session gRPC server listening on {}", grpc_addr);
             let result = TonicServer::builder()
                 .add_service(SessionServiceServer::new(grpc_service))
-                .serve_with_shutdown(grpc_addr, cancel.cancelled())
+                .serve_with_incoming_shutdown(grpc_incoming, cancel.cancelled())
                 .await;
             if let Err(e) = result {
                 error!("Session gRPC server error: {}", e);
             }
         });
+        self.server_abort_handles.push(grpc_handle.abort_handle());
 
         // Start HTTP server
         let http_addr = format!("0.0.0.0:{}", self.config.http_port);
@@ -109,7 +120,7 @@ impl SessionServer {
         let listener = tokio::net::TcpListener::bind(&http_addr).await?;
         let cancel = self.cancel.clone();
 
-        tokio::spawn(async move {
+        let http_handle = tokio::spawn(async move {
             info!("Session HTTP server listening on {}", http_addr);
             let result = axum::serve(listener, router)
                 .with_graceful_shutdown(async move { cancel.cancelled().await })
@@ -118,6 +129,7 @@ impl SessionServer {
                 error!("Session HTTP server error: {}", e);
             }
         });
+        self.server_abort_handles.push(http_handle.abort_handle());
 
         // Start push receiver
         if let Some(push_receiver) = self.push_receiver.take() {
@@ -224,6 +236,23 @@ impl SessionServer {
     pub fn stop(&self) {
         info!("Stopping Session server...");
         self.cancel.cancel();
+    }
+
+    /// Stop and wait for the gRPC/HTTP server tasks to finish, ensuring
+    /// ports are released before returning. Aborts server tasks to guarantee
+    /// the listeners are dropped and ports freed.
+    pub async fn stop_and_wait(&mut self) {
+        info!("Stopping Session server...");
+        self.cancel.cancel();
+
+        // Abort the server tasks to ensure the pre-bound listeners are
+        // dropped immediately, freeing the ports for a restart.
+        for handle in self.server_abort_handles.drain(..) {
+            handle.abort();
+        }
+
+        // Brief yield to let the runtime process the abort.
+        tokio::task::yield_now().await;
     }
 
     pub fn state(&self) -> Arc<SessionServerState> {

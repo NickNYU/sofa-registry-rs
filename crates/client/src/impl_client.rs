@@ -129,7 +129,8 @@ pub struct DefaultRegistryClient {
     client_id: String,
     connection: Arc<ClientConnection>,
     auth_manager: Option<AuthManager>,
-    subscribers: RwLock<HashMap<String, Arc<DefaultSubscriberHandle>>>,
+    subscribers: Arc<RwLock<HashMap<String, Vec<Arc<DefaultSubscriberHandle>>>>>,
+    publishers: Arc<RwLock<Vec<Arc<DefaultPublisherHandle>>>>,
     shutdown: Arc<Notify>,
 }
 
@@ -165,7 +166,8 @@ impl DefaultRegistryClient {
             client_id,
             connection,
             auth_manager,
-            subscribers: RwLock::new(HashMap::new()),
+            subscribers: Arc::new(RwLock::new(HashMap::new())),
+            publishers: Arc::new(RwLock::new(Vec::new())),
             shutdown: Arc::new(Notify::new()),
         }
     }
@@ -188,7 +190,8 @@ impl DefaultRegistryClient {
         let client_id = self.client_id.clone();
         let zone = self.config.zone.clone();
         let data_center = self.config.data_center.clone();
-        let subscribers = self.subscribers.read().clone();
+        let subscribers = self.subscribers.clone();
+        let publishers = self.publishers.clone();
 
         tokio::spawn(async move {
             // Start reconnect loop in background
@@ -213,8 +216,11 @@ impl DefaultRegistryClient {
                             while let Some(data) = rx.recv().await {
                                 let data_info_id =
                                     format!("{}#{}#{}", data.data_id, data.instance_id, data.group);
-                                if let Some(sub) = subscribers.get(&data_info_id) {
-                                    sub.notify_data(data);
+                                let subs = subscribers.read();
+                                if let Some(sub_list) = subs.get(&data_info_id) {
+                                    for sub in sub_list {
+                                        sub.notify_data(data.clone());
+                                    }
                                 } else {
                                     debug!(
                                         "Received data for unknown subscriber: {}",
@@ -234,6 +240,21 @@ impl DefaultRegistryClient {
 
             // Wait for shutdown
             shutdown.notified().await;
+
+            // Unregister all publishers so the server can clean up
+            // and notify remaining subscribers.
+            let active_pubs: Vec<Arc<DefaultPublisherHandle>> = publishers
+                .read()
+                .iter()
+                .filter(|h| h.is_registered())
+                .cloned()
+                .collect();
+            for handle in &active_pubs {
+                if let Err(e) = handle.unregister().await {
+                    debug!("Failed to unregister publisher on shutdown: {}", e);
+                }
+            }
+
             reconnect_shutdown.notify_one();
             reconnect_handle.abort();
             stream_handle.abort();
@@ -341,6 +362,9 @@ impl RegistryClient for DefaultRegistryClient {
             base_register: base,
         });
 
+        // Track the publisher so we can unregister on shutdown.
+        self.publishers.write().push(handle.clone());
+
         info!("Publisher registered: data_id={}", reg.data_id);
         Ok(handle)
     }
@@ -385,7 +409,9 @@ impl RegistryClient for DefaultRegistryClient {
         let data_info_id = reg.data_info_id();
         self.subscribers
             .write()
-            .insert(data_info_id, handle.clone());
+            .entry(data_info_id)
+            .or_default()
+            .push(handle.clone());
 
         info!("Subscriber registered: data_id={}", reg.data_id);
         Ok(handle)

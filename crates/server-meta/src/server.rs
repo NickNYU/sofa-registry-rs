@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use tokio::task::AbortHandle;
+use tokio_stream::wrappers::TcpListenerStream;
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Server as TonicServer;
 use tracing::{error, info};
@@ -34,6 +36,7 @@ pub struct MetaServer {
     config: MetaServerConfig,
     state: Arc<MetaServerState>,
     cancel: CancellationToken,
+    server_abort_handles: Vec<AbortHandle>,
 }
 
 impl MetaServer {
@@ -74,28 +77,33 @@ impl MetaServer {
             config,
             state,
             cancel: CancellationToken::new(),
+            server_abort_handles: Vec::new(),
         }
     }
 
     /// Start the meta server (gRPC + HTTP + election loop + eviction loop)
-    pub async fn start(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         info!("Starting Meta server...");
 
-        // Start gRPC server
-        let grpc_addr = format!("0.0.0.0:{}", self.config.grpc_port).parse()?;
+        // Start gRPC server -- pre-bind the listener so the port is released
+        // promptly when the server is stopped (important for restart).
+        let grpc_addr = format!("0.0.0.0:{}", self.config.grpc_port);
+        let grpc_listener = tokio::net::TcpListener::bind(&grpc_addr).await?;
+        let grpc_incoming = TcpListenerStream::new(grpc_listener);
         let grpc_service = MetaGrpcServiceImpl::new(self.state.clone());
         let cancel = self.cancel.clone();
 
-        tokio::spawn(async move {
+        let grpc_handle = tokio::spawn(async move {
             info!("Meta gRPC server listening on {}", grpc_addr);
             let result = TonicServer::builder()
                 .add_service(MetaServiceServer::new(grpc_service))
-                .serve_with_shutdown(grpc_addr, cancel.cancelled())
+                .serve_with_incoming_shutdown(grpc_incoming, cancel.cancelled())
                 .await;
             if let Err(e) = result {
                 error!("Meta gRPC server error: {}", e);
             }
         });
+        self.server_abort_handles.push(grpc_handle.abort_handle());
 
         // Start HTTP server
         let http_addr = format!("0.0.0.0:{}", self.config.http_port);
@@ -103,7 +111,7 @@ impl MetaServer {
         let listener = tokio::net::TcpListener::bind(&http_addr).await?;
         let cancel = self.cancel.clone();
 
-        tokio::spawn(async move {
+        let http_handle = tokio::spawn(async move {
             info!("Meta HTTP server listening on {}", http_addr);
             let result = axum::serve(listener, router)
                 .with_graceful_shutdown(async move { cancel.cancelled().await })
@@ -112,6 +120,7 @@ impl MetaServer {
                 error!("Meta HTTP server error: {}", e);
             }
         });
+        self.server_abort_handles.push(http_handle.abort_handle());
 
         // Start leader election loop
         let elector = self.state.leader_elector.clone();
@@ -174,6 +183,19 @@ impl MetaServer {
     pub fn stop(&self) {
         info!("Stopping Meta server...");
         self.cancel.cancel();
+    }
+
+    /// Stop and wait for the gRPC/HTTP server tasks to finish, ensuring
+    /// ports are released before returning.
+    pub async fn stop_and_wait(&mut self) {
+        info!("Stopping Meta server...");
+        self.cancel.cancel();
+
+        for handle in self.server_abort_handles.drain(..) {
+            handle.abort();
+        }
+
+        tokio::task::yield_now().await;
     }
 
     pub fn state(&self) -> Arc<MetaServerState> {

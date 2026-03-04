@@ -123,7 +123,7 @@ async fn start_meta_server(ports: &TestPorts, db_path: &std::path::Path) -> Meta
 
     let lock_repo = Arc::new(SqliteDistributeLockRepo::new(pool));
 
-    let server = MetaServer::new(
+    let mut server = MetaServer::new(
         config,
         lock_repo
             as Arc<dyn sofa_registry_store::traits::distribute_lock::DistributeLockRepository>,
