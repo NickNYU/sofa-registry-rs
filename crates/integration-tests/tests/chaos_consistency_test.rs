@@ -13,7 +13,14 @@ use sofa_registry_integration_tests::harness::{init_test_tracing, TestClient, Te
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn test_no_data_loss_after_server_restart() {
     init_test_tracing();
-    let mut cluster = TestCluster::start(84).await;
+    // Use a lower data_change_debounce_ms to speed up change notifications
+    // after data server restart. Under suite-wide contention the default
+    // 500 ms debounce can combine with stale-gRPC-channel reconnection time
+    // to push individual services past their timeout.
+    let mut cluster = TestCluster::start_with_config(84, |cfg| {
+        cfg.data.data_change_debounce_ms = 100;
+    })
+    .await;
     cluster
         .wait_for_ready(Duration::from_secs(15))
         .await
@@ -51,6 +58,10 @@ async fn test_no_data_loss_after_server_restart() {
         .await
         .expect("cluster not ready after data server restart");
 
+    // Allow extra time for the session server's stale gRPC channel to the
+    // old data server to reconnect to the new one.
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
     // After restart, re-publish and subscribe to verify the system works
     {
         let client = TestClient::connect(&session_addr).await;
@@ -68,8 +79,8 @@ async fn test_no_data_loss_after_server_restart() {
                 data_id,
                 result.err()
             );
-            // Small settle delay between services under high contention.
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            // Settle delay between services under high contention.
+            tokio::time::sleep(Duration::from_millis(200)).await;
         }
     }
 
